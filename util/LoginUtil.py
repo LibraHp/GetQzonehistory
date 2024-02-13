@@ -50,8 +50,9 @@ def QR():
 
 
 def cookie():
-    if Config.read_files_in_folder():
-        return eval(Config.read_files_in_folder())
+    select_user = Config.read_files_in_folder()
+    if select_user:
+        return eval(select_user)
     # 获取 QQ空间 cookie
     qrsig = QR()
     ptqrtoken = ptqrToken(qrsig)
