@@ -2,8 +2,8 @@ import requests
 from PIL import Image
 import time
 import re
-import os
 import util.ConfigUtil as Config
+
 
 def bkn(pSkey):
     # 计算bkn

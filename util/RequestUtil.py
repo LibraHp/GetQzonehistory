@@ -1,6 +1,6 @@
 import util.LoginUtil as Login
 import requests
-
+import json
 # 登陆后获取到的cookies
 cookies = Login.cookie()
 # 获取g_tk
@@ -52,3 +52,12 @@ def get_message(start, count):
     response = requests.get('https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds2_html_pav_all',
                             params=params, cookies=cookies, headers=headers)
     return response
+
+
+def get_login_user_info():
+    response = requests.get('https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?g_tk=' + str(g_tk) + '&uins=' + uin,
+                            headers=headers, cookies=cookies)
+    info = response.content.decode('GBK')
+    info = info.strip().lstrip('portraitCallBack(').rstrip(');')
+    info = json.loads(info)
+    return info

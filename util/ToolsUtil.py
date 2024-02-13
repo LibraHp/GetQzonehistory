@@ -25,7 +25,7 @@ def process_old_html(message):
 
     new_text = re.sub(r'\\x[0-9a-fA-F]{2}', replace_hex, message)
     start_string = "html:'"
-    end_string = "\'\,opuin"
+    end_string = "',opuin"
     new_text = extract_string_between(new_text, start_string, end_string)
     new_text = replace_multiple_spaces(new_text).replace('\\', '')
     return new_text

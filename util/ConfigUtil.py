@@ -6,6 +6,7 @@ config.read('./resource/config/config.ini')
 
 temp_path = config.get('File', 'temp')
 user_path = config.get('File', 'user')
+result_path = config.get('File', 'result')
 
 
 def save_user(cookies):
