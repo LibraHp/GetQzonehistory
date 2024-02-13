@@ -60,6 +60,6 @@ pip install -r requirements.txt
 
 ## 参考
 
-登录方法参考
+登录方法参考自
 [python-QQ空间扫码登录](https://blog.csdn.net/m0_50153253/article/details/113780595)
 
