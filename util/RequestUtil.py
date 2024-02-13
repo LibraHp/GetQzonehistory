@@ -43,6 +43,7 @@ def get_message(start, count):
         'useutf8': '1',
         'outputhtmlfeed': '1',
         'scope': '1',
+        'format': 'jsonp',
         'g_tk': [
             g_tk,
             g_tk,

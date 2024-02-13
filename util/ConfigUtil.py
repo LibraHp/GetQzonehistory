@@ -30,6 +30,8 @@ def read_files_in_folder():
             choice = int(input("请选择要登录的用户序号: "))
             if 1 <= choice <= len(files):
                 break
+            elif choice == 0:
+                return None
             else:
                 print("无效的选择，请重新输入。")
         except ValueError:
