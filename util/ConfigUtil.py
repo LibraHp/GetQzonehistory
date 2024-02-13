@@ -18,12 +18,12 @@ def read_files_in_folder():
     files = os.listdir(user_path)
 
     # 输出文件列表
-    print("文件列表:")
+    print("已保存用户:")
     for i, file in enumerate(files):
         print(f"{i + 1}. {file}")
 
     # 选择文件
-    choice = int(input("请选择要读取的文件编号: "))
+    choice = int(input("请选择要登陆的用户: "))
 
     # 读取选择的文件
     selected_file = files[choice - 1]
