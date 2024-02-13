@@ -50,6 +50,8 @@ def QR():
 
 
 def cookie():
+    if Config.read_files_in_folder():
+        return eval(Config.read_files_in_folder())
     # 获取 QQ空间 cookie
     qrsig = QR()
     ptqrtoken = ptqrToken(qrsig)
@@ -82,8 +84,7 @@ def cookie():
                     r = requests.get(url, cookies=cookies, allow_redirects=False)
                     target_cookies = requests.utils.dict_from_cookiejar(r.cookies)
                     p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
-                    # 删除二维码
-                    os.remove(Config.temp_path + 'QR.png')
+                    Config.save_user(target_cookies)
                     break
 
                 except Exception as e:
