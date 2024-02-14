@@ -16,7 +16,7 @@ def signal_handler(signal, frame):
 
 
 def save_data():
-    df = pd.DataFrame(texts, columns=['内容'])
+    df = pd.DataFrame(texts, columns=['时间', '内容'])
     df.to_excel(Config.result_path + Request.uin + '.xlsx', index=False)
     print('导出成功，请查看 ' + Config.result_path + Request.uin + '.xlsx')
 
@@ -36,16 +36,22 @@ if __name__ == '__main__':
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-        for i in trange(1000, desc='Progress', unit='iteration'):
+        for i in trange(1000, desc='Progress', unit='100条'):
             message = Request.get_message(i * 100, 100).content.decode('utf-8')
             html = Tools.process_old_html(message)
             if "li" not in html:
                 break
             soup = BeautifulSoup(html, 'html.parser')
-            for element in soup.find_all('p', class_='txt-box-title ellipsis-one'):
-                text = element.get_text().replace('\xa0', ' ')
-                if text not in texts:
-                    texts.append(text)
+            for element in soup.find_all('li', class_='f-single f-s-s'):
+                time = None
+                text = None
+                time_element = element.find('div', class_='info-detail')
+                text_element = element.find('p', class_='txt-box-title ellipsis-one')
+                if time_element is not None and text_element is not None:
+                    time = time_element.get_text().replace('\xa0', ' ')
+                    text = text_element.get_text().replace('\xa0', ' ')
+                if text not in [sublist[1] for sublist in texts] and time is not None and text is not None:
+                    texts.append([time, text])
 
         if len(texts) > 0:
             save_data()
