@@ -1,5 +1,7 @@
 import requests
 from PIL import Image
+import qrcode
+from pyzbar.pyzbar import decode
 import time
 import re
 import util.ConfigUtil as Config
@@ -41,7 +43,14 @@ def QR():
         im = Image.open(Config.temp_path + 'QR.png')
         im = im.resize((350, 350))
         print(time.strftime('%H:%M:%S'), '登录二维码获取成功')
-        im.show()
+
+        # 解码二维码
+        decoded_objects = decode(im)
+        for obj in decoded_objects:
+            qr = qrcode.QRCode()
+            qr.add_data(obj.data.decode('utf-8'))
+            # invert=True白底黑块,有些app不识别黑底白块.
+            qr.print_ascii(invert=True)
 
         return qrsig
 
@@ -66,7 +75,8 @@ def cookie():
         try:
             r = requests.get(url, cookies=cookies)
             if '二维码未失效' in r.text:
-                print(time.strftime('%H:%M:%S'), '二维码未失效')
+                # print(time.strftime('%H:%M:%S'), '二维码未失效')
+                pass
             elif '二维码认证中' in r.text:
                 print(time.strftime('%H:%M:%S'), '二维码认证中')
             elif '二维码已失效' in r.text:
