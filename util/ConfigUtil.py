@@ -14,6 +14,23 @@ def save_user(cookies):
         f.write(str(cookies))
 
 
+def init_flooder():
+    # 初始化temp文件夹
+    if not os.path.exists(temp_path):
+        os.makedirs(temp_path)
+        print(f"Created directory: {temp_path}")
+
+    # 初始化user文件夹
+    if not os.path.exists(user_path):
+        os.makedirs(user_path)
+        print(f"Created directory: {user_path}")
+
+    # 初始化result文件夹
+    if not os.path.exists(result_path):
+        os.makedirs(result_path)
+        print(f"Created directory: {result_path}")
+
+
 def read_files_in_folder():
     # 获取文件夹下的所有文件
     files = os.listdir(user_path)
@@ -45,4 +62,3 @@ def read_files_in_folder():
         content = file.read()
 
     return content
-
