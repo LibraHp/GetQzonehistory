@@ -46,6 +46,8 @@ myenv\Scripts\activate
 source myenv/bin/activate
 # 安装依赖
 pip install -r requirements.txt
+# 运行脚本
+python main.py
 ```
 #### 使用本机环境（不推荐）
 ```bash
@@ -55,6 +57,8 @@ git clone https://github.com/LibraHp/GetQzonehistory.git
 cd GetQzonehistory
 # 安装依赖
 pip install -r requirements.txt
+# 运行脚本
+python main.py
 ```
 
 

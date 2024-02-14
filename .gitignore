@@ -1,3 +1,4 @@
 resource/temp
 .idea
 util/__pycache__
+/myenv/
