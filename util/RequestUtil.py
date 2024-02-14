@@ -1,3 +1,5 @@
+import re
+
 import util.LoginUtil as Login
 import requests
 import json
@@ -6,7 +8,7 @@ cookies = Login.cookie()
 # 获取g_tk
 g_tk = Login.bkn(cookies.get('p_skey'))
 # 获取uin
-uin = cookies.get('uin')[1:]
+uin = re.sub(r'o0*', '', cookies.get('uin'))
 # 全局header
 headers = {
     'authority': 'user.qzone.qq.com',
