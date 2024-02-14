@@ -50,6 +50,7 @@ def QR():
 
 
 def cookie():
+    Config.init_flooder()
     select_user = Config.read_files_in_folder()
     if select_user:
         return eval(select_user)

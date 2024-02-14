@@ -23,7 +23,6 @@ def save_data():
 
 if __name__ == '__main__':
     try:
-        Config.init_flooder()
         user_info = Request.get_login_user_info()
         user_nickname = user_info[Request.uin][6]
         print(f"用户<{Request.uin}>,<{user_nickname}>登录成功")
