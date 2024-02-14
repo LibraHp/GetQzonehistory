@@ -30,13 +30,13 @@ if __name__ == '__main__':
         print(f"登录失败:请重新登录,错误信息:{str(e)}")
         exit(0)
     texts = []
-
+    count = Request.get_message_count()
     try:
         # 注册信号处理函数
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-        for i in trange(1000, desc='Progress', unit='100条'):
+        for i in trange(int(count / 100) + 1, desc='Progress', unit='100条'):
             message = Request.get_message(i * 100, 100).content.decode('utf-8')
             html = Tools.process_old_html(message)
             if "li" not in html:
@@ -50,8 +50,8 @@ if __name__ == '__main__':
                 if time_element is not None and text_element is not None:
                     time = time_element.get_text().replace('\xa0', ' ')
                     text = text_element.get_text().replace('\xa0', ' ')
-                if text not in [sublist[1] for sublist in texts] and time is not None and text is not None:
-                    texts.append([time, text])
+                    if text not in [sublist[1] for sublist in texts]:
+                        texts.append([time, text])
 
         if len(texts) > 0:
             save_data()

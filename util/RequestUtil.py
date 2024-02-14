@@ -1,8 +1,9 @@
 import re
-
+from tqdm import tqdm
 import util.LoginUtil as Login
 import requests
 import json
+
 # 登陆后获取到的cookies
 cookies = Login.cookie()
 # 获取g_tk
@@ -63,3 +64,22 @@ def get_login_user_info():
     info = info.strip().lstrip('portraitCallBack(').rstrip(');')
     info = json.loads(info)
     return info
+
+
+def get_message_count():
+    # 初始的总量范围
+    lower_bound = 0
+    upper_bound = 100000  # 假设最大总量为1000000
+    total = upper_bound // 2  # 初始的总量为上下界的中间值
+    with tqdm(desc="正在获取消息列表数量...") as pbar:
+        while lower_bound <= upper_bound:
+            response = get_message(total, 100)
+            if "li" in response.text:
+                # 请求成功，总量应该在当前总量的右侧
+                lower_bound = total + 1
+            else:
+                # 请求失败，总量应该在当前总量的左侧
+                upper_bound = total - 1
+            total = (lower_bound + upper_bound) // 2  # 更新总量为新的中间值
+            pbar.update(1)
+    return total
