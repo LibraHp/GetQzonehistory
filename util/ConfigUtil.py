@@ -45,7 +45,7 @@ def read_files_in_folder():
     # 选择文件
     while True:
         try:
-            choice = int(input("请选择要登录的用户序号: "))
+            choice = int(input("请选择要登录的用户序号，重新登录输入0: "))
             if 1 <= choice <= len(files):
                 break
             elif choice == 0:
