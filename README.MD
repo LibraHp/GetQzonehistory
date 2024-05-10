@@ -45,7 +45,7 @@ myenv\Scripts\activate
 # 对于 macOS/Linux：
 source myenv/bin/activate
 # 安装依赖
-pip install -r requirements.txt
+pip install -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
 # 运行脚本
 python main.py
 ```
@@ -56,7 +56,7 @@ git clone https://github.com/LibraHp/GetQzonehistory.git
 # 打开目录
 cd GetQzonehistory
 # 安装依赖
-pip install -r requirements.txt
+pip install -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
 # 运行脚本
 python main.py
 ```
