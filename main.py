@@ -239,9 +239,21 @@ def get_message(start, count):
             g_tk,
         ],
     }
-    response = requests.get('https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds2_html_pav_all',
-                            params=params, cookies=cookies, headers=headers)
+    
+    try:
+        response = requests.get(
+            'https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds2_html_pav_all',
+            params=params,
+            cookies=cookies,
+            headers=headers,
+            timeout=(5, 10)  # 设置连接超时为5秒，读取超时为10秒
+        )
+    except requests.Timeout:
+        print("请求超时")
+        return None
+    
     return response
+
 
 
 def get_login_user_info():
@@ -319,20 +331,21 @@ if __name__ == '__main__':
 
         for i in trange(int(count / 100) + 1, desc='Progress', unit='100条'):
             message = get_message(i * 100, 100).content.decode('utf-8')
+            time.sleep(0.2)
             html = process_old_html(message)
             if "li" not in html:
-                break
+                continue
             soup = BeautifulSoup(html, 'html.parser')
             for element in soup.find_all('li', class_='f-single f-s-s'):
-                time = None
+                put_time = None
                 text = None
                 time_element = element.find('div', class_='info-detail')
                 text_element = element.find('p', class_='txt-box-title ellipsis-one')
                 if time_element is not None and text_element is not None:
-                    time = time_element.get_text().replace('\xa0', ' ')
+                    put_time = time_element.get_text().replace('\xa0', ' ')
                     text = text_element.get_text().replace('\xa0', ' ')
                     if text not in [sublist[1] for sublist in texts]:
-                        texts.append([time, text])
+                        texts.append([put_time, text])
 
         if len(texts) > 0:
             save_data()
