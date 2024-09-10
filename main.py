@@ -40,7 +40,7 @@ if __name__ == '__main__':
             message = Request.get_message(i * 100, 100).content.decode('utf-8')
             html = Tools.process_old_html(message)
             if "li" not in html:
-                break
+                continue
             soup = BeautifulSoup(html, 'html.parser')
             for element in soup.find_all('li', class_='f-single f-s-s'):
                 time = None

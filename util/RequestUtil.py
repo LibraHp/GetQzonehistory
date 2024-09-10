@@ -52,8 +52,19 @@ def get_message(start, count):
             g_tk,
         ],
     }
-    response = requests.get('https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds2_html_pav_all',
-                            params=params, cookies=cookies, headers=headers)
+    
+    try:
+        response = requests.get(
+            'https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds2_html_pav_all',
+            params=params,
+            cookies=cookies,
+            headers=headers,
+            timeout=(5, 10)  # 设置连接超时为5秒，读取超时为10秒
+        )
+    except requests.Timeout:
+        print("请求超时")
+        return None
+    
     return response
 
 
