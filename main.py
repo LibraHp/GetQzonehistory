@@ -129,6 +129,7 @@ def save_data():
     print('\033[36m' + '图片列表共有 ' + str(len(os.listdir(pic_save_path))) + ' 张图片' + '\033[0m')
     current_directory = os.getcwd()
     os.startfile(current_directory + user_save_path[1:])
+    os.system('pause')
 
 
 def bkn(pSkey):
@@ -175,6 +176,7 @@ def QR():
             qr.add_data(obj.data.decode('utf-8'))
             # invert=True白底黑块,有些app不识别黑底白块.
             qr.print_ascii(invert=True)
+        im.show()
 
         return qrsig
 
