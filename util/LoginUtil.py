@@ -1,7 +1,17 @@
+import sys
 import requests
 from PIL import Image
 import qrcode
-from pyzbar.pyzbar import decode
+import platform
+try:
+    from pyzbar.pyzbar import decode
+except Exception as e:
+    print("无法找到 zbar 共享库。请确保安装了 zbar。")
+    if platform.system() == "Linux":
+        print("对于基于 RPM 的系统（如 Fedora), 您可以运行以下命令:")
+        print("sudo dnf install -y zbar")
+    print("有关更多安装指南，请参考 zbar 的官方文档或您的发行版文档。")
+    sys.exit(1)
 import time
 import re
 import util.ConfigUtil as Config
