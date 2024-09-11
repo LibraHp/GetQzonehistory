@@ -52,7 +52,7 @@ def get_message(start, count):
             g_tk,
         ],
     }
-    
+
     try:
         response = requests.get(
             'https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds2_html_pav_all',
@@ -64,7 +64,7 @@ def get_message(start, count):
     except requests.Timeout:
         print("请求超时")
         return None
-    
+
     return response
 
 
@@ -84,13 +84,23 @@ def get_message_count():
     total = upper_bound // 2  # 初始的总量为上下界的中间值
     with tqdm(desc="正在获取消息列表数量...") as pbar:
         while lower_bound <= upper_bound:
-            response = get_message(total, 100)
-            if "li" in response.text:
-                # 请求成功，总量应该在当前总量的右侧
-                lower_bound = total + 1
-            else:
-                # 请求失败，总量应该在当前总量的左侧
-                upper_bound = total - 1
-            total = (lower_bound + upper_bound) // 2  # 更新总量为新的中间值
+            try:
+                response = get_message(total, 100)
+
+                if response and hasattr(response, 'text'):
+                    if "li" in response.text:
+                        lower_bound = total + 1
+                    else:
+                        upper_bound = total - 1
+                else:
+                    print(f"无效的响应对象: {response}")
+                    break
+
+            except Exception as e:
+                print(f"请求发生异常: {e}")
+                break
+
+            total = (lower_bound + upper_bound) // 2
             pbar.update(1)
+
     return total
