@@ -1,3 +1,5 @@
+import platform
+import subprocess
 from bs4 import BeautifulSoup
 from tqdm import trange
 import util.RequestUtil as Request
@@ -76,17 +78,25 @@ def save_data():
     print('\033[36m' + '留言列表共有 ' + str(len(leave_message)) + ' 条留言' + '\033[0m')
     print('\033[32m' + '其他列表共有 ' + str(len(other_message)) + ' 条内容' + '\033[0m')
     print('\033[36m' + '图片列表共有 ' + str(len(os.listdir(pic_save_path))) + ' 张图片' + '\033[0m')
-
-    if platform.system() == "Windows":
-        current_directory = os.getcwd()
-        os.startfile(current_directory + user_save_path[1:])
-        os.system('pause')
-    else:
-        # 兼容Linux
-        full_path = os.path.abspath(user_save_path) 
-        print("数据已经写入"+ full_path)
-   
+    current_directory = os.getcwd()
+    # os.startfile(current_directory + user_save_path[1:])
+    open_file(current_directory + user_save_path[1:])
+    os.system('pause')
     
+def open_file(file_path):
+    # 检查操作系统
+    if platform.system() == 'Windows':
+        # Windows 系统使用 os.startfile
+        os.startfile(file_path)
+    elif platform.system() == 'Darwin':
+        # macOS 系统使用 subprocess 和 open 命令
+        subprocess.run(['open', file_path])
+    elif platform.system() == 'Linux':
+        # Linux 系统使用 subprocess 和 xdg-open 命令
+        subprocess.run(['xdg-open', file_path])
+    else:
+        print(f"Unsupported OS: {platform.system()}")
+
 
 if __name__ == '__main__':
     try:
