@@ -12,6 +12,7 @@ import re
 from tqdm import trange,tqdm
 import requests
 import time
+import platform
 
 # 信号处理函数
 def signal_handler(signal, frame):
