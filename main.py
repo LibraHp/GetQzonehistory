@@ -94,6 +94,12 @@ def save_data():
         if item_pic_link is not None and len(item_pic_link) > 0 and 'http' in item_pic_link:
             # 保存图片
             pic_name = re.sub(r'[\\/:*?"<>|]', '_', item_text) + '.jpg'
+                # 去除文件名中的空格
+            pic_name = pic_name.replace(' ', '')
+    
+            # 限制文件名长度
+            if len(pic_name) > 40:
+                pic_name = pic_name[:40] + '.jpg'
             # pic_name = pic_name.split('：')[1] + '.jpg'
             response = requests.get(item_pic_link)
             if response.status_code == 200:
