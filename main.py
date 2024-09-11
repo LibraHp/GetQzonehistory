@@ -10,6 +10,7 @@ import re
 from tqdm import trange,tqdm
 import requests
 import time
+import platform
 
 # 信号处理函数
 def signal_handler(signal, frame):
@@ -75,9 +76,17 @@ def save_data():
     print('\033[36m' + '留言列表共有 ' + str(len(leave_message)) + ' 条留言' + '\033[0m')
     print('\033[32m' + '其他列表共有 ' + str(len(other_message)) + ' 条内容' + '\033[0m')
     print('\033[36m' + '图片列表共有 ' + str(len(os.listdir(pic_save_path))) + ' 张图片' + '\033[0m')
-    current_directory = os.getcwd()
-    os.startfile(current_directory + user_save_path[1:])
-    os.system('pause')
+
+    if platform.system() == "Windows":
+        current_directory = os.getcwd()
+        os.startfile(current_directory + user_save_path[1:])
+        os.system('pause')
+    else:
+        # 兼容Linux
+        full_path = os.path.abspath(user_save_path) 
+        print("数据已经写入"+ full_path)
+   
+    
 
 if __name__ == '__main__':
     try:
