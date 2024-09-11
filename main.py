@@ -78,9 +78,51 @@ def signal_handler(signal, frame):
 
 
 def save_data():
-    df = pd.DataFrame(texts, columns=['时间', '内容'])
-    df.to_excel(result_path + uin + '.xlsx', index=False)
-    print('导出成功，请查看 ' + result_path + uin + '.xlsx')
+    user_save_path = result_path + uin + '/'
+    pic_save_path = user_save_path + 'pic/'
+    if not os.path.exists(user_save_path):
+        os.makedirs(user_save_path)
+        print(f"Created directory: {user_save_path}")
+    if not os.path.exists(pic_save_path):
+        os.makedirs(pic_save_path)
+        print(f"Created directory: {pic_save_path}")
+    pd.DataFrame(texts, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + uin + '_全部列表.xlsx', index=False)
+    pd.DataFrame(all_friends, columns=['昵称', 'QQ', '空间主页']).to_excel(user_save_path + uin + '_好友列表.xlsx', index=False)
+    for item in tqdm(texts, desc="处理消息列表", unit="item"):
+        item_text = item[1]
+        item_pic_link = item[2]
+        if item_pic_link is not None and len(item_pic_link) > 0 and 'http' in item_pic_link:
+            # 保存图片
+            pic_name = re.sub(r'[\\/:*?"<>|]', '_', item_text) + '.jpg'
+            # pic_name = pic_name.split('：')[1] + '.jpg'
+            response = requests.get(item_pic_link)
+            if response.status_code == 200:
+                with open(pic_save_path + pic_name, 'wb') as f:
+                    f.write(response.content)
+        if user_nickname in item_text:
+            if '留言' in item_text:
+                leave_message.append(item)
+            elif '转发' in item_text:
+                forward_message.append(item)
+            else:
+                user_message.append(item)
+        else:
+            other_message.append(item)
+    pd.DataFrame(user_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + uin + '_说说列表.xlsx', index=False)
+    pd.DataFrame(forward_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + uin + '_转发列表.xlsx', index=False)
+    pd.DataFrame(leave_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + uin + '_留言列表.xlsx', index=False)
+    pd.DataFrame(other_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + uin + '_其他列表.xlsx', index=False)
+    print('\033[36m' + '导出成功，请查看 ' + user_save_path + uin + ' 文件夹内容' + '\033[0m')
+    print('\033[32m' + '共有 ' + str(len(texts)) + ' 条消息' + '\033[0m')
+    print('\033[36m' + '最早的一条说说发布在' + texts[texts.__len__() - 1][0] + '\033[0m')
+    print('\033[32m' + '好友列表共有 ' + str(len(all_friends)) + ' 个好友' + '\033[0m')
+    print('\033[36m' + '说说列表共有 ' + str(len(user_message)) + ' 条说说' + '\033[0m')
+    print('\033[32m' + '转发列表共有 ' + str(len(forward_message)) + ' 条转发' + '\033[0m')
+    print('\033[36m' + '留言列表共有 ' + str(len(leave_message)) + ' 条留言' + '\033[0m')
+    print('\033[32m' + '其他列表共有 ' + str(len(other_message)) + ' 条内容' + '\033[0m')
+    print('\033[36m' + '图片列表共有 ' + str(len(os.listdir(pic_save_path))) + ' 张图片' + '\033[0m')
+    current_directory = os.getcwd()
+    os.startfile(current_directory + user_save_path[1:])
 
 
 def bkn(pSkey):
@@ -268,9 +310,9 @@ def get_login_user_info():
 def get_message_count():
     # 初始的总量范围
     lower_bound = 0
-    upper_bound = 100000  # 假设最大总量为1000000
+    upper_bound = 10000000  # 假设最大总量为1000000
     total = upper_bound // 2  # 初始的总量为上下界的中间值
-    with tqdm(desc="正在获取消息列表数量...", total=17, unit='页') as pbar:
+    with tqdm(desc="正在获取消息列表数量...", total=23, unit='页') as pbar:
         while lower_bound <= upper_bound:
             response = get_message(total, 100)
             if "li" in response.text:
@@ -323,6 +365,11 @@ if __name__ == '__main__':
         print(f"登录失败:请重新登录,错误信息:{str(e)}")
         exit(0)
     texts = []
+    all_friends = []
+    other_message = []
+    user_message = []
+    leave_message = []
+    forward_message = []
     count = get_message_count()
     try:
         # 注册信号处理函数
@@ -339,13 +386,25 @@ if __name__ == '__main__':
             for element in soup.find_all('li', class_='f-single f-s-s'):
                 put_time = None
                 text = None
+                img = None
+                friend_element = element.find('a', class_='f-name q_namecard')
+                # 获取好友昵称和QQ
+                if friend_element is not None:
+                    friend_name = friend_element.get_text()
+                    friend_qq = friend_element.get('link')[9:]
+                    friend_link = friend_element.get('href')
+                    if friend_qq not in [sublist[1] for sublist in all_friends]:
+                        all_friends.append([friend_name, friend_qq, friend_link])
                 time_element = element.find('div', class_='info-detail')
                 text_element = element.find('p', class_='txt-box-title ellipsis-one')
+                img_element = element.find('a', class_='img-item')
                 if time_element is not None and text_element is not None:
                     put_time = time_element.get_text().replace('\xa0', ' ')
                     text = text_element.get_text().replace('\xa0', ' ')
+                    if img_element is not None:
+                        img = img_element.find('img').get('src')
                     if text not in [sublist[1] for sublist in texts]:
-                        texts.append([put_time, text])
+                        texts.append([put_time, text, img])
 
         if len(texts) > 0:
             save_data()

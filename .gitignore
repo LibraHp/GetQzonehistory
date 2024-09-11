@@ -1,3 +1,6 @@
-/resource/
 .idea
 /myenv/
+/build/
+/dist/
+/resource/
+
