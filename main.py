@@ -76,9 +76,15 @@ def signal_handler(signal, frame):
         save_data()
     exit(0)
 
-def show_author_info():
-    print('\033[36m' + r'''
 
+def show_author_info():
+    CYAN = '\033[36m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    RESET = '\033[0m'
+    RED = '\033[31m'
+    
+    author_art = r'''
 ░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓███████▓▒░   ░▒▓██████▓▒░  ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓███████▓▒░  
 ░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ 
 ░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ 
@@ -86,10 +92,16 @@ def show_author_info():
 ░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░        
 ░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░        
 ░▒▓████████▓▒░ ░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░        
-                                                                                                  
+'''
 
-bilibili 高数带我飞 GetQzonehistory
-''' + '\033[0m')
+    print(CYAN + author_art + RESET)
+    
+    author_info = f"{YELLOW}bilibili{RESET} {BLUE}@高数带我飞{RESET} {YELLOW}GetQzonehistory V1.0{RESET}"
+    print(author_info)
+    print(f'{RED}程序完全免费，且在github开源！！！！{RESET}')
+    print(f'{RED}程序完全免费，且在github开源！！！！{RESET}')
+    print(f'{RED}程序完全免费，且在github开源！！！！{RESET}')
+
 
 def save_data():
     user_save_path = result_path + uin + '/'
