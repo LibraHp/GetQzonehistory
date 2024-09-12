@@ -76,6 +76,20 @@ def signal_handler(signal, frame):
         save_data()
     exit(0)
 
+def show_author_info():
+    print('\033[36m' + r'''
+
+░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓███████▓▒░   ░▒▓██████▓▒░  ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓███████▓▒░  
+░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ 
+░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ 
+░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓███████▓▒░  ░▒▓████████▓▒░ ░▒▓████████▓▒░ ░▒▓███████▓▒░  
+░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░        
+░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░        
+░▒▓████████▓▒░ ░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░        
+                                                                                                  
+
+bilibili 高数带我飞 GetQzonehistory
+''' + '\033[0m')
 
 def save_data():
     user_save_path = result_path + uin + '/'
@@ -118,6 +132,7 @@ def save_data():
     pd.DataFrame(forward_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + uin + '_转发列表.xlsx', index=False)
     pd.DataFrame(leave_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + uin + '_留言列表.xlsx', index=False)
     pd.DataFrame(other_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + uin + '_其他列表.xlsx', index=False)
+    show_author_info()
     print('\033[36m' + '导出成功，请查看 ' + user_save_path + uin + ' 文件夹内容' + '\033[0m')
     print('\033[32m' + '共有 ' + str(len(texts)) + ' 条消息' + '\033[0m')
     print('\033[36m' + '最早的一条说说发布在' + texts[texts.__len__() - 1][0] + '\033[0m')
