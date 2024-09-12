@@ -24,11 +24,6 @@ def signal_handler(signal, frame):
 
 
 def save_data():
-    df = pd.DataFrame(texts, columns=['时间', '内容'])
-    df.to_excel(Config.result_path + Request.uin + '.xlsx', index=False)
-    print('导出成功，请查看 ' + Config.result_path + Request.uin + '.xlsx')
-
-def save_data():
     user_save_path = Config.result_path + Request.uin + '/'
     pic_save_path = user_save_path + 'pic/'
     if not os.path.exists(user_save_path):
@@ -69,6 +64,7 @@ def save_data():
     pd.DataFrame(forward_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_转发列表.xlsx', index=False)
     pd.DataFrame(leave_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_留言列表.xlsx', index=False)
     pd.DataFrame(other_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_其他列表.xlsx', index=False)
+    Tools.show_author_info()
     print('\033[36m' + '导出成功，请查看 ' + user_save_path + Request.uin + ' 文件夹内容' + '\033[0m')
     print('\033[32m' + '共有 ' + str(len(texts)) + ' 条消息' + '\033[0m')
     print('\033[36m' + '最早的一条说说发布在' + texts[texts.__len__() - 1][0] + '\033[0m')

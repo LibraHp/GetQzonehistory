@@ -1,6 +1,9 @@
+.idea
+**/.DS_Store
+**/__pycache__/
+/myenv/
 resource/temp
 resource/result
 resource/user
-.idea
-util/__pycache__
-/myenv/
+resource/fetch-all
+
