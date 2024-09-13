@@ -1,3 +1,4 @@
+from datetime import datetime
 import platform
 import subprocess
 from bs4 import BeautifulSoup
@@ -21,6 +22,56 @@ def signal_handler(signal, frame):
         save_data()
     exit(0)
 
+
+# 还原QQ空间网页版说说
+def render_html(shuoshuo_path, zhuanfa_path):
+        # 读取 Excel 文件内容
+        shuoshuo_df = pd.read_excel(shuoshuo_path)
+        zhuanfa_df = pd.read_excel(zhuanfa_path)
+        # 头像
+        avatar_url = f"https://q.qlogo.cn/headimg_dl?dst_uin={Request.uin}&spec=640&img_type=jpg"
+        # 提取说说列表中的数据
+        shuoshuo_data = shuoshuo_df[['时间', '内容', '图片链接']].values.tolist()
+        # 提取转发列表中的数据
+        zhuanfa_data = zhuanfa_df[['时间', '内容', '图片链接']].values.tolist()
+        # 合并所有数据
+        all_data = shuoshuo_data + zhuanfa_data
+        # 按时间排序
+        all_data.sort(key=lambda x: datetime.strptime(x[0], "%Y年%m月%d日 %H:%M"), reverse=True)
+        html_template, post_template = Tools.get_html_template()
+        # 构建动态内容
+        post_html = ""
+        for entry in all_data:
+            try:
+                time, content, img_url = entry
+                img_url = str(img_url)
+                content_lst = content.split("：")
+                if len(content_lst) == 1:
+                    continue
+                nickname = content_lst[0]
+                message = content_lst[1]
+
+                image_html = f'<div class="image"><img src="{img_url}" alt="图片"></div>' if img_url and img_url.startswith(
+                    'http') else ''
+
+                # 生成每个动态的HTML块
+                post_html += post_template.format(
+                    avatar_url=avatar_url,
+                    nickname=nickname,
+                    time=time,
+                    message=message,
+                    image=image_html
+                )
+            except Exception as err:
+                print(err)
+
+        # 生成完整的HTML
+        final_html = html_template.format(posts=post_html)
+        user_save_path = Config.result_path + Request.uin + '/'
+        # 将HTML写入文件
+        output_file = os.path.join(os.getcwd(), user_save_path, Request.uin + "_说说网页版.html")
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(final_html)
 
 
 def save_data():
@@ -64,6 +115,7 @@ def save_data():
     pd.DataFrame(forward_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_转发列表.xlsx', index=False)
     pd.DataFrame(leave_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_留言列表.xlsx', index=False)
     pd.DataFrame(other_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_其他列表.xlsx', index=False)
+    render_html(user_save_path + Request.uin + '_说说列表.xlsx', user_save_path + Request.uin + '_转发列表.xlsx')
     Tools.show_author_info()
     print('\033[36m' + '导出成功，请查看 ' + user_save_path + Request.uin + ' 文件夹内容' + '\033[0m')
     print('\033[32m' + '共有 ' + str(len(texts)) + ' 条消息' + '\033[0m')
