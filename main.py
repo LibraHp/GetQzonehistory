@@ -28,8 +28,8 @@ def safe_strptime(date_str):
         # 尝试按照指定格式解析日期
         return datetime.strptime(date_str, "%Y年%m月%d日 %H:%M")
     except ValueError:
-        # 如果日期格式不对，返回 None
-        return None
+        # 如果日期格式不对，返回 datetime.max
+        return datetime.max
     
 
 # 还原QQ空间网页版说说
@@ -139,6 +139,7 @@ def save_data():
     # os.startfile(current_directory + user_save_path[1:])
     open_file(current_directory + user_save_path[1:])
     os.system('pause')
+    
     
 def open_file(file_path):
     # 检查操作系统
