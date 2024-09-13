@@ -23,6 +23,15 @@ def signal_handler(signal, frame):
     exit(0)
 
 
+def safe_strptime(date_str):
+    try:
+        # 尝试按照指定格式解析日期
+        return datetime.strptime(date_str, "%Y年%m月%d日 %H:%M")
+    except ValueError:
+        # 如果日期格式不对，返回 None
+        return None
+    
+
 # 还原QQ空间网页版说说
 def render_html(shuoshuo_path, zhuanfa_path):
         # 读取 Excel 文件内容
@@ -37,7 +46,7 @@ def render_html(shuoshuo_path, zhuanfa_path):
         # 合并所有数据
         all_data = shuoshuo_data + zhuanfa_data
         # 按时间排序
-        all_data.sort(key=lambda x: datetime.strptime(x[0], "%Y年%m月%d日 %H:%M"), reverse=True)
+        all_data.sort(key=lambda x: safe_strptime(x[0]) or datetime.min, reverse=True)
         html_template, post_template = Tools.get_html_template()
         # 构建动态内容
         post_html = ""
