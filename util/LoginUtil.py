@@ -91,7 +91,7 @@ def cookie():
                 print(time.strftime('%H:%M:%S'), '二维码认证中')
             elif '二维码已失效' in r.text:
                 print(time.strftime('%H:%M:%S'), '二维码已失效')
-            else:
+            elif '登录成功' in r.text:
                 print(time.strftime('%H:%M:%S'), '登录成功')
                 cookies = requests.utils.dict_from_cookiejar(r.cookies)
                 uin = requests.utils.dict_from_cookiejar(r.cookies).get('uin')
@@ -111,6 +111,8 @@ def cookie():
 
                 except Exception as e:
                     print(e)
+            else:
+                print(time.strftime('%H:%M:%S'), '用户取消登录')
 
         except Exception as e:
             print(e)

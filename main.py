@@ -6,14 +6,16 @@ from tqdm import trange
 import util.RequestUtil as Request
 import util.ToolsUtil as Tools
 import util.ConfigUtil as Config
+import util.GetAllMomentsUtil as GetAllMoments
 import pandas as pd
 import signal
 import os
 import re
-from tqdm import trange,tqdm
+from tqdm import trange, tqdm
 import requests
 import time
 import platform
+
 
 # 信号处理函数
 def signal_handler(signal, frame):
@@ -24,65 +26,86 @@ def signal_handler(signal, frame):
 
 
 def safe_strptime(date_str):
+    # 部分日期缺少最后的秒数，首先解析带秒数的日期格式，如果解析失败再解析不带秒数的日期
     try:
-        # 尝试按照指定格式解析日期
-        return datetime.strptime(date_str, "%Y年%m月%d日 %H:%M")
+        # 尝试按照带秒格式解析日期
+        return datetime.strptime(date_str, "%Y年%m月%d日 %H:%M:%S")
     except ValueError:
-        # 如果日期格式不对，返回 datetime.max
-        return datetime.max
-    
+        # 尝试按照不带秒格式解析日期
+        try:
+            return datetime.strptime(date_str, "%Y年%m月%d日 %H:%M")
+        except ValueError:
+            # 如果日期格式不对，返回 datetime.max
+            return datetime.max
+
 
 # 还原QQ空间网页版说说
 def render_html(shuoshuo_path, zhuanfa_path):
-        # 读取 Excel 文件内容
-        shuoshuo_df = pd.read_excel(shuoshuo_path)
-        zhuanfa_df = pd.read_excel(zhuanfa_path)
-        # 头像
-        avatar_url = f"https://q.qlogo.cn/headimg_dl?dst_uin={Request.uin}&spec=640&img_type=jpg"
-        # 提取说说列表中的数据
-        shuoshuo_data = shuoshuo_df[['时间', '内容', '图片链接']].values.tolist()
-        # 提取转发列表中的数据
-        zhuanfa_data = zhuanfa_df[['时间', '内容', '图片链接']].values.tolist()
-        # 合并所有数据
-        all_data = shuoshuo_data + zhuanfa_data
-        # 按时间排序
-        all_data.sort(key=lambda x: safe_strptime(x[0]) or datetime.min, reverse=True)
-        html_template, post_template = Tools.get_html_template()
-        # 构建动态内容
-        post_html = ""
-        for entry in all_data:
-            try:
-                time, content, img_url = entry
-                img_url = str(img_url)
-                content_lst = content.split("：")
-                if len(content_lst) == 1:
-                    continue
-                nickname = content_lst[0]
-                message = content_lst[1]
+    # 读取 Excel 文件内容
+    shuoshuo_df = pd.read_excel(shuoshuo_path)
+    zhuanfa_df = pd.read_excel(zhuanfa_path)
+    # 头像
+    avatar_url = f"https://q.qlogo.cn/headimg_dl?dst_uin={Request.uin}&spec=640&img_type=jpg"
+    # 提取说说列表中的数据
+    shuoshuo_data = shuoshuo_df[['时间', '内容', '图片链接', '评论']].values.tolist()
+    # 提取转发列表中的数据
+    zhuanfa_data = zhuanfa_df[['时间', '内容', '图片链接', '评论']].values.tolist()
+    # 合并所有数据
+    all_data = shuoshuo_data + zhuanfa_data
+    # 按时间排序
+    all_data.sort(key=lambda x: safe_strptime(x[0]) or datetime.min, reverse=True)
+    html_template, post_template, comment_template = Tools.get_html_template()
+    # 构建动态内容
+    post_html = ""
+    for entry in all_data:
+        try:
+            time, content, img_urls, comments = entry
+            img_url_lst = str(img_urls).split(",")
+            content_lst = content.split("：")
+            if len(content_lst) == 1:
+                continue
+            nickname = content_lst[0]
+            message = content_lst[1]
+            image_html = '<div class="image">'
+            for img_url in img_url_lst:
+                if img_url and img_url.startswith('http'):
+                    image_html += f'<img src="{img_url}" alt="图片">\n'
+            image_html += "</div>"
+            comment_html = ""
+            # 获取评论数据
+            if str(comments) != "nan":
+                comments = eval(comments)
+                for comment in comments:
+                    comment_create_time, comment_content, comment_nickname, comment_uin = comment
+                    comment_avatar_url = f"https://q.qlogo.cn/headimg_dl?dst_uin={comment_uin}&spec=640&img_type=jpg"
+                    comment_html += comment_template.format(
+                        avatar_url=comment_avatar_url,
+                        nickname=comment_nickname,
+                        time=comment_create_time,
+                        message=comment_content
+                    )
+            # 生成每个动态的HTML块
+            post_html += post_template.format(
+                avatar_url=avatar_url,
+                nickname=nickname,
+                time=time,
+                message=message,
+                image=image_html,
+                comments=comment_html
+            )
+        except Exception as err:
+            print(err)
 
-                image_html = f'<div class="image"><img src="{img_url}" alt="图片"></div>' if img_url and img_url.startswith(
-                    'http') else ''
-
-                # 生成每个动态的HTML块
-                post_html += post_template.format(
-                    avatar_url=avatar_url,
-                    nickname=nickname,
-                    time=time,
-                    message=message,
-                    image=image_html
-                )
-            except Exception as err:
-                print(err)
-
-        # 生成完整的HTML
-        final_html = html_template.format(posts=post_html)
-        user_save_path = Config.result_path + Request.uin + '/'
-        # 将HTML写入文件
-        output_file = os.path.join(os.getcwd(), user_save_path, Request.uin + "_说说网页版.html")
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(final_html)
+    # 生成完整的HTML
+    final_html = html_template.format(posts=post_html)
+    user_save_path = Config.result_path + Request.uin + '/'
+    # 将HTML写入文件
+    output_file = os.path.join(os.getcwd(), user_save_path, Request.uin + "_说说网页版.html")
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(final_html)
 
 
+# 保存数据
 def save_data():
     user_save_path = Config.result_path + Request.uin + '/'
     pic_save_path = user_save_path + 'pic/'
@@ -92,38 +115,50 @@ def save_data():
     if not os.path.exists(pic_save_path):
         os.makedirs(pic_save_path)
         print(f"Created directory: {pic_save_path}")
-    pd.DataFrame(texts, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_全部列表.xlsx', index=False)
-    pd.DataFrame(all_friends, columns=['昵称', 'QQ', '空间主页']).to_excel(user_save_path + Request.uin + '_好友列表.xlsx', index=False)
+    pd.DataFrame(texts, columns=['时间', '内容', '图片链接', '评论']).to_excel(
+        user_save_path + Request.uin + '_全部列表.xlsx',
+        index=False)
+    pd.DataFrame(all_friends, columns=['昵称', 'QQ', '空间主页']).to_excel(
+        user_save_path + Request.uin + '_好友列表.xlsx', index=False)
     for item in tqdm(texts, desc="处理消息列表", unit="item"):
         item_text = item[1]
-        item_pic_link = item[2]
-        if item_pic_link is not None and len(item_pic_link) > 0 and 'http' in item_pic_link:
-            # 保存图片
-            pic_name = re.sub(r'[\\/:*?"<>|]', '_', item_text) + '.jpg'
+        # 可见说说中可能存在多张图片
+        item_pic_links = str(item[2]).split(",")
+        for item_pic_link in item_pic_links:
+            if item_pic_link is not None and len(item_pic_link) > 0 and 'http' in item_pic_link:
+                # 保存图片
+                pic_name = re.sub(r'[\\/:*?"<>|]', '_', item_text) + '.jpg'
                 # 去除文件名中的空格
-            pic_name = pic_name.replace(' ', '')
-    
-            # 限制文件名长度
-            if len(pic_name) > 40:
-                pic_name = pic_name[:40] + '.jpg'
-            # pic_name = pic_name.split('：')[1] + '.jpg'
-            response = requests.get(item_pic_link)
-            if response.status_code == 200:
-                with open(pic_save_path + pic_name, 'wb') as f:
-                    f.write(response.content)
+                pic_name = pic_name.replace(' ', '')
+
+                # 限制文件名长度
+                if len(pic_name) > 40:
+                    pic_name = pic_name[:40] + '.jpg'
+                # pic_name = pic_name.split('：')[1] + '.jpg'
+                response = requests.get(item_pic_link)
+                if response.status_code == 200:
+                    # 防止图片重名
+                    if os.path.exists(pic_save_path + pic_name):
+                        pic_name = pic_name.split('.')[0] + "_" + str(int(time.time())) + '.jpg'
+                    with open(pic_save_path + pic_name, 'wb') as f:
+                        f.write(response.content)
         if user_nickname in item_text:
             if '留言' in item_text:
-                leave_message.append(item)
+                leave_message.append(item[:-1])
             elif '转发' in item_text:
                 forward_message.append(item)
             else:
                 user_message.append(item)
         else:
-            other_message.append(item)
-    pd.DataFrame(user_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_说说列表.xlsx', index=False)
-    pd.DataFrame(forward_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_转发列表.xlsx', index=False)
-    pd.DataFrame(leave_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_留言列表.xlsx', index=False)
-    pd.DataFrame(other_message, columns=['时间', '内容', '图片链接']).to_excel(user_save_path + Request.uin + '_其他列表.xlsx', index=False)
+            other_message.append(item[:-1])
+    pd.DataFrame(user_message, columns=['时间', '内容', '图片链接', '评论']).to_excel(
+        user_save_path + Request.uin + '_说说列表.xlsx', index=False)
+    pd.DataFrame(forward_message, columns=['时间', '内容', '图片链接', '评论']).to_excel(
+        user_save_path + Request.uin + '_转发列表.xlsx', index=False)
+    pd.DataFrame(leave_message, columns=['时间', '内容', '图片链接']).to_excel(
+        user_save_path + Request.uin + '_留言列表.xlsx', index=False)
+    pd.DataFrame(other_message, columns=['时间', '内容', '图片链接']).to_excel(
+        user_save_path + Request.uin + '_其他列表.xlsx', index=False)
     render_html(user_save_path + Request.uin + '_说说列表.xlsx', user_save_path + Request.uin + '_转发列表.xlsx')
     Tools.show_author_info()
     print('\033[36m' + '导出成功，请查看 ' + user_save_path + Request.uin + ' 文件夹内容' + '\033[0m')
@@ -139,8 +174,9 @@ def save_data():
     # os.startfile(current_directory + user_save_path[1:])
     open_file(current_directory + user_save_path[1:])
     os.system('pause')
-    
-    
+
+
+# 打开文件展示
 def open_file(file_path):
     # 检查操作系统
     if platform.system() == 'Windows':
@@ -154,6 +190,11 @@ def open_file(file_path):
         subprocess.run(['xdg-open', file_path])
     else:
         print(f"Unsupported OS: {platform.system()}")
+
+
+def get_content_from_split(content):
+    content_split = str(content).split("：")
+    return content_split[1].strip() if len(content_split) > 1 else content.strip()
 
 
 if __name__ == '__main__':
@@ -175,7 +216,6 @@ if __name__ == '__main__':
         # 注册信号处理函数
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
-
         for i in trange(int(count / 100) + 1, desc='Progress', unit='100条'):
             message = Request.get_message(i * 100, 100).content.decode('utf-8')
             time.sleep(0.2)
@@ -205,10 +245,18 @@ if __name__ == '__main__':
                         img = img_element.find('img').get('src')
                     if text not in [sublist[1] for sublist in texts]:
                         texts.append([put_time, text, img])
-
-        if len(texts) > 0:
-            save_data()
     except Exception as e:
-        print(f"发生异常: {str(e)}")
-        if len(texts) > 0:
-            save_data()
+        print(f"获取QQ空间互动消息发生异常: {str(e)}")
+    texts = [t + [""] for t in texts]   # 确保texts是四列, 防止后续保存结果出现问题
+    try:
+        user_moments = GetAllMoments.get_visible_moments_list()
+        if user_moments and len(user_moments) > 0:
+            # 如果可见说说的内容是从消息列表恢复的说说内容子集，则不添加到消息列表中
+            texts = [t for t in texts if
+                     not any(get_content_from_split(u[1]) in get_content_from_split(t[1]) for u in user_moments)]
+            texts.extend(user_moments)
+    except Exception as err:
+        print(f"获取未删除QQ空间记录发生异常: {str(err)}")
+
+    if len(texts) > 0:
+        save_data()
