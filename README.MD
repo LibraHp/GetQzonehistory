@@ -9,24 +9,29 @@
 
 ```text
 project/
-├── resource/           # 资源目录
-│   ├── config/         # 配置目录，文件保存位置配置
+├── resource/                # 资源目录
+│   ├── config/              # 配置目录，文件保存位置配置
 │   │   └── config.ini
-│   ├── result/         # 导出结果的目录，格式为“你的qq.xlsx”
+│   ├── result/              # 导出结果的目录，格式为“你的qq.xlsx”
 │   │   ├── ...
 │   │   └── ...
-│   ├── temp/           # 缓存目录
+│   ├── temp/                # 缓存目录
 │   │   ├── ...
 │   │   └── ...
-├── util/               # 单元工具目录
-│   ├── ConfigUtil.py   # 读取配置
-│   ├── LoginUtil.py    # 登录相关
-│   ├── RequestUtil.py  # 请求数据相关
-│   └── ToolsUtil.py    # 工具
-├── main.py             # 主程序入口
-├── README.md           # 项目说明文件
-├── requirements.txt    # 依赖项列表
-└── LICENSE             # 许可证文件
+│   ├── user/                # 用户信息
+│   │   ├── ...
+│   │   └── ...
+├── util/                    # 单元工具目录
+│   ├── ConfigUtil.py        # 读取配置
+│   ├── GetAllMomentsUtil.py # 获取未删除的所有说说
+│   ├── LoginUtil.py         # 登录相关
+│   ├── RequestUtil.py       # 请求数据相关
+│   └── ToolsUtil.py         # 工具
+├── main.py                  # 主程序入口
+├── fetch_all_message.py     # 主程序入口
+├── README.md                # 项目说明文件
+├── requirements.txt         # 依赖项列表
+└── LICENSE                  # 许可证文件
 ```
 
 ## 安装

@@ -1,4 +1,7 @@
 import re
+import json
+import os
+import time
 
 
 # 提取两个字符串之间的内容
@@ -37,7 +40,7 @@ def show_author_info():
     BLUE = '\033[34m'
     RESET = '\033[0m'
     RED = '\033[31m'
-    
+
     author_art = r'''
 ░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓███████▓▒░  ░▒▓███████▓▒░   ░▒▓██████▓▒░  ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓███████▓▒░  
 ░▒▓█▓▒░        ░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░░▒▓█▓▒░ 
@@ -49,7 +52,7 @@ def show_author_info():
 '''
 
     print(CYAN + author_art + RESET)
-    
+
     author_info = f"{YELLOW}bilibili{RESET} {BLUE}@高数带我飞{RESET} {YELLOW}GetQzonehistory V1.0{RESET}"
     print(author_info)
     print(f'{RED}程序完全免费，且在github开源！！！！{RESET}')
@@ -82,13 +85,13 @@ def get_html_template():
                 float: left;
                 margin-right: 20px;
             }}
-            .content {{
-                overflow: hidden;
-            }}
             .avatar img {{
                 width: 50px;
                 height: 50px;
                 border-radius: 50%;
+            }}
+            .content {{
+                overflow: hidden;
             }}
             .nickname {{
                 font-size: 1.2em;
@@ -104,15 +107,47 @@ def get_html_template():
             }}
             .image {{
                 margin-top: 10px;
+                display: flex;
+                justify-content: space-around;
+                align-items: center; /* 使两张图片垂直对齐 */
+                padding: 20px;
             }}
             .image img {{
-                max-width: 100%;
+                max-width: 33vw;
+                max-height: 33vh;
                 border-radius: 10px;
+            }}
+            .comments {{
+                margin-top: 5px; /* 调整这里的值来减少间距 */
+                background-color: #444;
+                padding: 2px 10px 10px 10px;
+                border-radius: 10px;
+            }}
+            .comment {{
+                margin-top: 10px; /* 调整单个评论之间的间距 */
+                padding: 10px;
+                background-color: #555;
+                border-radius: 10px;
+                color: #fff;
+            }}
+            .comment .avatar img {{
+                width: 30px;
+                height: 30px;
+            }}
+            .comment .nickname {{
+                font-size: 1em;
+                font-weight: bold;
+            }}
+            .comment .time {{
+                font-size: 0.8em;
+                color: #aaa;
             }}
         </style>
     </head>
     <body>
+
         {posts}
+
     </body>
     </html>
     """
@@ -129,7 +164,59 @@ def get_html_template():
             <div class="message">{message}</div>
             {image}
         </div>
+         {comments}
     </div>
     """
 
-    return html_template, post_template
+    # 评论区HTML模板
+    comment_template = """
+    <div class="comments">
+        <div class="comment">
+            <div class="avatar">
+                <img src="{avatar_url}" alt="评论头像">
+            </div>
+            <div class="nickname">{nickname}</div>
+            <div class="time">{time}</div>
+            <div class="message">{message}</div>
+        </div>
+    </div>
+    """
+
+    return html_template, post_template, comment_template
+
+
+# 格式化时间
+def format_timestamp(timestamp):
+    time_struct = time.localtime(timestamp)
+    formatted_time = time.strftime("%Y年%m月%d日 %H:%M:%S", time_struct)
+    return formatted_time
+
+
+# 判断json是否合法
+def is_valid_json(json_data):
+    try:
+        json_object = json.loads(json_data)  # 尝试解析JSON数据
+        return True  # 解析成功，是有效的JSON
+    except ValueError as e:  # 解析失败，捕获异常
+        print(e)
+        return False  # 解析失败，不是有效的JSON
+
+
+# 写入信息
+def write_txt_file(workdir, file_name, data):
+    if not os.path.exists(workdir):
+        os.makedirs(workdir)
+    base_path_file_name = os.path.join(workdir, file_name)
+    with open(base_path_file_name, 'w', encoding='utf-8') as file:
+        file.write(data)
+
+
+# 读取文件信息
+def read_txt_file(workdir, file_name):
+    base_path_file_name = os.path.join(workdir, file_name)
+    if os.path.exists(base_path_file_name):
+        with open(base_path_file_name, 'r', encoding='utf-8') as file:
+            return file.read()
+    return None
+
+
