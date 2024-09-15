@@ -16,6 +16,12 @@ import requests
 import time
 import platform
 
+texts = list()
+all_friends = list()
+other_message = list()
+user_message = list()
+leave_message = list()
+forward_message = list()
 
 # 信号处理函数
 def signal_handler(signal, frame):
@@ -205,12 +211,7 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"登录失败:请重新登录,错误信息:{str(e)}")
         exit(0)
-    texts = []
-    all_friends = []
-    other_message = []
-    user_message = []
-    leave_message = []
-    forward_message = []
+
     count = Request.get_message_count()
     try:
         # 注册信号处理函数
