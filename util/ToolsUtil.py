@@ -62,6 +62,7 @@ def show_author_info():
 
 def get_html_template():
     # HTML模板
+    # HTML模板
     html_template = """
     <!DOCTYPE html>
     <html lang="zh-CN">
@@ -116,6 +117,7 @@ def get_html_template():
                 max-width: 33vw;
                 max-height: 33vh;
                 border-radius: 10px;
+                cursor: pointer;
             }}
             .comments {{
                 margin-top: 5px; /* 调整这里的值来减少间距 */
@@ -147,7 +149,14 @@ def get_html_template():
     <body>
 
         {posts}
-
+        <script>
+            // 为所有图片添加点击事件
+            document.querySelectorAll(".image img").forEach(img => {{
+                img.addEventListener("click", function() {{
+                    window.open(this.src, '_blank');  // 打开图片链接并在新标签页中展示
+                }});
+            }});
+        </script>
     </body>
     </html>
     """
