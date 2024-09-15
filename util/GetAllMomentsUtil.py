@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import sys
@@ -11,13 +12,15 @@ from util import RequestUtil as Request
 from util import LoginUtil
 from util import ToolsUtil as Tool
 
-WORKDIR = "./resource/fetch-all/"
+QQ_NUMBER = Request.uin
+WORKDIR = f"./resource/fetch-all/{QQ_NUMBER}"   # 通过QQ号进行区分配置文件，防止误加载其他用户信息
 USER_QZONE_INFO = 'user_qzone_info.json'
 QZONE_MOMENTS_ALL = 'qzone_moments_all.json'
 
 
 # 获取所有可见的未删除的说说+高清图片（包含2014年之前）
 def get_visible_moments_list():
+
     # 1. 获取说说总条数
     user_qzone_info = Tool.read_txt_file(WORKDIR, USER_QZONE_INFO)
     if not user_qzone_info:
@@ -25,15 +28,16 @@ def get_visible_moments_list():
         qq_userinfo_response = get_user_qzone_info(1)
         Tool.write_txt_file(WORKDIR, USER_QZONE_INFO, qq_userinfo_response)
         user_qzone_info = Tool.read_txt_file(WORKDIR, USER_QZONE_INFO)
+
     if not Tool.is_valid_json(user_qzone_info):
         print("获取QQ空间信息失败")
         return None
     json_dict = json.loads(user_qzone_info)
-    totalMomentsCount = json_dict['total']
-    print(f'你的未删除说说总条数{totalMomentsCount}')
+    total_moments_count = json_dict['total']
+    print(f'你的未删除说说总条数{total_moments_count}')
 
     # 当前未删除说说总数为0, 直接返回
-    if totalMomentsCount == 0:
+    if total_moments_count == 0:
         return None
 
     # 2. 获取所有说说数据
@@ -41,8 +45,22 @@ def get_visible_moments_list():
     qzone_moments_all = Tool.read_txt_file(WORKDIR, QZONE_MOMENTS_ALL)
     if not qzone_moments_all:
         # 缓存未找到，开始请求获取所有未删除说说
-        qq_userinfo_response = get_user_qzone_info(totalMomentsCount)
-        Tool.write_txt_file(WORKDIR, QZONE_MOMENTS_ALL, qq_userinfo_response)
+        # qq_userinfo_response = get_user_qzone_info(totalMomentsCount)
+        # Tool.write_txt_file(WORKDIR, QZONE_MOMENTS_ALL, qq_userinfo_response)
+        # qzone_moments_all = Tool.read_txt_file(WORKDIR, QZONE_MOMENTS_ALL)
+        default_page_size = 30  # 默认一页30条
+        total_page_num = math.ceil(total_moments_count / default_page_size)  # 总页数
+        all_page_data = []  # 用于存储所有页的数据
+        for current_page_num in range(0, total_page_num):
+            # 数据偏移量
+            pos = current_page_num * default_page_size
+            qq_userinfo_response = get_user_qzone_info(default_page_size, pos)
+            current_page_data = json.loads(qq_userinfo_response)["msglist"]
+            if current_page_data:
+                all_page_data.extend(current_page_data)
+            time.sleep(0.02)
+        qq_userinfo = json.dumps({"msglist": all_page_data}, ensure_ascii=False, indent=2)
+        Tool.write_txt_file(WORKDIR, QZONE_MOMENTS_ALL, qq_userinfo)
         qzone_moments_all = Tool.read_txt_file(WORKDIR, QZONE_MOMENTS_ALL)
 
     if not Tool.is_valid_json(qzone_moments_all):
@@ -81,7 +99,7 @@ def get_visible_moments_list():
 
 
 # 获取用户QQ空间相关信息
-def get_user_qzone_info(num):
+def get_user_qzone_info(page_size, offset=0):
     url = 'https://user.qzone.qq.com/proxy/domain/taotao.qq.com/cgi-bin/emotion_cgi_msglist_v6'
     cookies = Request.cookies
     g_tk = LoginUtil.bkn(cookies.get('p_skey'))
@@ -109,8 +127,8 @@ def get_user_qzone_info(num):
         'uin': f'{qqNumber}',
         'ftype': '0',
         'sort': '0',
-        'pos': '0',
-        'num': f'{num}',
+        'pos': f'{offset}',
+        'num': f'{page_size}',
         'replynum': '100',
         'g_tk': f'{g_tk}',
         'callback': '_preloadCallback',

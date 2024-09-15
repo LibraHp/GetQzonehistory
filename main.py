@@ -1,3 +1,4 @@
+import shutil
 from datetime import datetime
 import platform
 import subprocess
@@ -16,6 +17,12 @@ import requests
 import time
 import platform
 
+texts = list()
+all_friends = list()
+other_message = list()
+user_message = list()
+leave_message = list()
+forward_message = list()
 
 # 信号处理函数
 def signal_handler(signal, frame):
@@ -69,6 +76,9 @@ def render_html(shuoshuo_path, zhuanfa_path):
             image_html = '<div class="image">'
             for img_url in img_url_lst:
                 if img_url and img_url.startswith('http'):
+                    # 将图片替换为高清图
+                    img_url = str(img_url).replace("/m&ek=1&kp=1", "/s&ek=1&kp=1")
+                    img_url = str(img_url).replace(r"!/m/", "!/s/")
                     image_html += f'<img src="{img_url}" alt="图片">\n'
             image_html += "</div>"
             comment_html = ""
@@ -186,8 +196,18 @@ def open_file(file_path):
         # macOS 系统使用 subprocess 和 open 命令
         subprocess.run(['open', file_path])
     elif platform.system() == 'Linux':
-        # Linux 系统使用 subprocess 和 xdg-open 命令
-        subprocess.run(['xdg-open', file_path])
+        # Linux 系统，首先检查是否存在 xdg-open 工具
+        if shutil.which('xdg-open'):
+            subprocess.run(['xdg-open', file_path])
+        # 如果 xdg-open 不存在，检查是否存在 gnome-open 工具（适用于 GNOME 桌面环境）
+        elif shutil.which('gnome-open'):
+            subprocess.run(['gnome-open', file_path])
+        # 如果 gnome-open 不存在，检查是否存在 kde-open 工具（适用于 KDE 桌面环境）
+        elif shutil.which('kde-open'):
+            subprocess.run(['kde-open', file_path])
+        # 如果以上工具都不存在，提示用户手动打开文件
+        else:
+            print("未找到可用的打开命令，请手动打开文件。")
     else:
         print(f"Unsupported OS: {platform.system()}")
 
@@ -205,12 +225,7 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"登录失败:请重新登录,错误信息:{str(e)}")
         exit(0)
-    texts = []
-    all_friends = []
-    other_message = []
-    user_message = []
-    leave_message = []
-    forward_message = []
+
     count = Request.get_message_count()
     try:
         # 注册信号处理函数
