@@ -1,3 +1,4 @@
+import shutil
 from datetime import datetime
 import platform
 import subprocess
@@ -195,8 +196,18 @@ def open_file(file_path):
         # macOS 系统使用 subprocess 和 open 命令
         subprocess.run(['open', file_path])
     elif platform.system() == 'Linux':
-        # Linux 系统使用 subprocess 和 xdg-open 命令
-        subprocess.run(['xdg-open', file_path])
+        # Linux 系统，首先检查是否存在 xdg-open 工具
+        if shutil.which('xdg-open'):
+            subprocess.run(['xdg-open', file_path])
+        # 如果 xdg-open 不存在，检查是否存在 gnome-open 工具（适用于 GNOME 桌面环境）
+        elif shutil.which('gnome-open'):
+            subprocess.run(['gnome-open', file_path])
+        # 如果 gnome-open 不存在，检查是否存在 kde-open 工具（适用于 KDE 桌面环境）
+        elif shutil.which('kde-open'):
+            subprocess.run(['kde-open', file_path])
+        # 如果以上工具都不存在，提示用户手动打开文件
+        else:
+            print("未找到可用的打开命令，请手动打开文件。")
     else:
         print(f"Unsupported OS: {platform.system()}")
 
