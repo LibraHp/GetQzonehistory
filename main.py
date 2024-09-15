@@ -75,6 +75,9 @@ def render_html(shuoshuo_path, zhuanfa_path):
             image_html = '<div class="image">'
             for img_url in img_url_lst:
                 if img_url and img_url.startswith('http'):
+                    # 将图片替换为高清图
+                    img_url = str(img_url).replace("/m&ek=1&kp=1", "/s&ek=1&kp=1")
+                    img_url = str(img_url).replace(r"!/m/", "!/s/")
                     image_html += f'<img src="{img_url}" alt="图片">\n'
             image_html += "</div>"
             comment_html = ""
