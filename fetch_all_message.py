@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import sys
@@ -12,16 +13,15 @@ WORKDIR = "./resource/fetch-all/"
 MESSAGE_SAMPLE = 'msg-one.json'
 MESSAGE_ALL = 'msg-all.json'
 
-
 # 获取所有可见的未删除的说说+高清图片（包含2014年之前）
 def get_visible_msg_list():
     # 1. 获取说说总条数
     try:
         msgSample = read_txt_file(MESSAGE_SAMPLE)
     except FileNotFoundError as e:
-        print("样本缓存未找到，开始请求获取样本")
+        # 样本缓存未找到，开始请求获取样本
         qqResponse = get_msg_list(1)
-        print("创建缓存文件并写入")
+        # 创建缓存文件并写入
         write_txt_file(MESSAGE_SAMPLE, qqResponse)
         msgSample = read_txt_file(MESSAGE_SAMPLE)
 
@@ -34,14 +34,27 @@ def get_visible_msg_list():
         sys.exit(1)
 
     # 2. 获取所有说说数据
-    print('开始不分页获取所有未删除说说')
     try:
         msgAll = read_txt_file(MESSAGE_ALL)
     except FileNotFoundError as e:
-        print("缓存未找到，开始请求获取所有未删除说说")
-        qqResponse = get_msg_list(totalCount)
-        write_txt_file(MESSAGE_ALL, qqResponse)
-        msgAll = read_txt_file(MESSAGE_ALL)
+        # 缓存未找到，准备分页获取所有未删除说说"
+        # 一页20条
+        defaultPageSize = 30
+        # 总页数
+        totalPageNum = math.ceil(totalCount / defaultPageSize)
+        # 用于存储所有页的数据
+        allPageData = []
+        print(f"一共{totalPageNum}页")
+        for currentPageNum in range(0, totalPageNum):
+            # 数据偏移量
+            pos = currentPageNum * defaultPageSize
+            print(
+                f"=========一页{defaultPageSize}条, 获取第{currentPageNum + 1}页, 需要再次选择账号(再次输入1即可)=========")
+            qqResponse = get_msg_list(defaultPageSize, pos)
+            currentPageData = json.loads(qqResponse)["msglist"]
+            allPageData.extend(currentPageData)
+        msgAll = json.dumps({"msglist": allPageData}, ensure_ascii=False, indent=2)
+        write_txt_file(MESSAGE_ALL, msgAll)
 
     try:
         json_dict = json.loads(msgAll)
@@ -96,7 +109,7 @@ def get_visible_msg_list():
     write_txt_file("所有可见说说.md", markdown_content)
 
 
-def get_msg_list(num):
+def get_msg_list(pageSize, offset=0):
     url = 'https://user.qzone.qq.com/proxy/domain/taotao.qq.com/cgi-bin/emotion_cgi_msglist_v6'
     cookies = LoginUtil.cookie()
     g_tk = LoginUtil.bkn(cookies.get('p_skey'))
@@ -124,8 +137,8 @@ def get_msg_list(num):
         'uin': f'{qqNumber}',
         'ftype': '0',
         'sort': '0',
-        'pos': '0',
-        'num': f'{num}',
+        'pos': f'{offset}',
+        'num': f'{pageSize}',
         'replynum': '100',
         'g_tk': f'{g_tk}',
         'callback': '_preloadCallback',
@@ -159,7 +172,6 @@ def write_txt_file(file_name, data):
 def read_txt_file(file_name):
     base_path_file_name = os.path.join(WORKDIR, file_name)
     if os.path.exists(base_path_file_name):
-        print("读取缓存文件")
         with open(base_path_file_name, 'r', encoding='utf-8') as file:
             return file.read()
     else:
