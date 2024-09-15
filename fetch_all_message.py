@@ -12,9 +12,12 @@ from util import LoginUtil
 WORKDIR = "./resource/fetch-all/"
 MESSAGE_SAMPLE = 'msg-one.json'
 MESSAGE_ALL = 'msg-all.json'
-
+cookies = None
 # 获取所有可见的未删除的说说+高清图片（包含2014年之前）
 def get_visible_msg_list():
+    global cookies
+    if cookies is None:
+        cookies = LoginUtil.cookie()
     # 1. 获取说说总条数
     try:
         msgSample = read_txt_file(MESSAGE_SAMPLE)
@@ -49,7 +52,7 @@ def get_visible_msg_list():
             # 数据偏移量
             pos = currentPageNum * defaultPageSize
             print(
-                f"=========一页{defaultPageSize}条, 获取第{currentPageNum + 1}页, 需要再次选择账号(再次输入1即可)=========")
+                f"一页{defaultPageSize}条, 获取第{currentPageNum + 1}页")
             qqResponse = get_msg_list(defaultPageSize, pos)
             currentPageData = json.loads(qqResponse)["msglist"]
             allPageData.extend(currentPageData)
@@ -111,7 +114,6 @@ def get_visible_msg_list():
 
 def get_msg_list(pageSize, offset=0):
     url = 'https://user.qzone.qq.com/proxy/domain/taotao.qq.com/cgi-bin/emotion_cgi_msglist_v6'
-    cookies = LoginUtil.cookie()
     g_tk = LoginUtil.bkn(cookies.get('p_skey'))
     qqNumber = re.sub(r'o0*', '', cookies.get('uin'))
     skey = cookies.get('skey')
