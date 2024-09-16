@@ -24,6 +24,7 @@ user_message = list()
 leave_message = list()
 forward_message = list()
 
+
 # 信号处理函数
 def signal_handler(signal, frame):
     # 在手动结束程序时保存已有的数据
@@ -135,23 +136,24 @@ def save_data():
         # 可见说说中可能存在多张图片
         item_pic_links = str(item[2]).split(",")
         for item_pic_link in item_pic_links:
-            if item_pic_link is not None and len(item_pic_link) > 0 and 'http' in item_pic_link:
-                # 保存图片
-                pic_name = re.sub(r'[\\/:*?"<>|]', '_', item_text) + '.jpg'
-                # 去除文件名中的空格
-                pic_name = pic_name.replace(' ', '')
-
-                # 限制文件名长度
-                if len(pic_name) > 40:
-                    pic_name = pic_name[:40] + '.jpg'
-                # pic_name = pic_name.split('：')[1] + '.jpg'
-                response = requests.get(item_pic_link)
-                if response.status_code == 200:
-                    # 防止图片重名
-                    if os.path.exists(pic_save_path + pic_name):
-                        pic_name = pic_name.split('.')[0] + "_" + str(int(time.time())) + '.jpg'
-                    with open(pic_save_path + pic_name, 'wb') as f:
-                        f.write(response.content)
+            # 如果图片链接为空或者不是http链接，则跳过
+            if not item_pic_link or len(item_pic_link) == 0 or 'http' not in item_pic_link:
+                continue
+            # 去除非法字符 / Emoji表情
+            pic_name = re.sub(r'\[em\].*?\[/em\]|[^\w\s]|[\\/:*?"<>|\r\n]+', '_', item_text).replace(" ", "") + '.jpg'
+            # 去除文件名中的空格
+            pic_name = pic_name.replace(' ', '')
+            # 限制文件名长度
+            if len(pic_name) > 40:
+                pic_name = pic_name[:40] + '.jpg'
+            # pic_name = pic_name.split('：')[1] + '.jpg'
+            response = requests.get(item_pic_link)
+            if response.status_code == 200:
+                # 防止图片重名
+                if os.path.exists(pic_save_path + pic_name):
+                    pic_name = pic_name.split('.')[0] + "_" + str(int(time.time())) + '.jpg'
+                with open(pic_save_path + pic_name, 'wb') as f:
+                    f.write(response.content)
         if user_nickname in item_text:
             if '留言' in item_text:
                 leave_message.append(item[:-1])
@@ -262,7 +264,7 @@ if __name__ == '__main__':
                         texts.append([put_time, text, img])
     except Exception as e:
         print(f"获取QQ空间互动消息发生异常: {str(e)}")
-    texts = [t + [""] for t in texts]   # 确保texts是四列, 防止后续保存结果出现问题
+    texts = [t + [""] for t in texts]  # 确保texts是四列, 防止后续保存结果出现问题
     try:
         user_moments = GetAllMoments.get_visible_moments_list()
         if user_moments and len(user_moments) > 0:
