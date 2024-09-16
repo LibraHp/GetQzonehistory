@@ -1,9 +1,7 @@
 import shutil
 from datetime import datetime
-import platform
 import subprocess
 from bs4 import BeautifulSoup
-from tqdm import trange
 import util.RequestUtil as Request
 import util.ToolsUtil as Tools
 import util.ConfigUtil as Config
