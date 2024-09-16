@@ -229,3 +229,9 @@ def read_txt_file(workdir, file_name):
     return None
 
 
+# QQ空间表情替换 [em]xxx[/em] 为 <img src="http://qzonestyle.gtimg.cn/qzone/em/xxx.gif">
+def replace_em_to_img(match):
+    # 获取匹配的 xxx 部分
+    emoji_code = match.group(1)
+    return f'<img src="http://qzonestyle.gtimg.cn/qzone/em/{emoji_code}.gif" alt="{emoji_code}">'
+

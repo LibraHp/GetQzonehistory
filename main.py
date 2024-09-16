@@ -73,7 +73,11 @@ def render_html(shuoshuo_path, zhuanfa_path):
             if len(content_lst) == 1:
                 continue
             nickname = content_lst[0]
+            # 将nickname当中的QQ表情替换为img标签
+            nickname = re.sub(r'\[em\](.*?)\[/em\]', Tools.replace_em_to_img, nickname)
             message = content_lst[1]
+            # 将message当中的QQ表情替换为img标签
+            message = re.sub(r'\[em\](.*?)\[/em\]', Tools.replace_em_to_img, message)
             image_html = '<div class="image">'
             for img_url in img_url_lst:
                 if img_url and img_url.startswith('http'):
@@ -88,6 +92,9 @@ def render_html(shuoshuo_path, zhuanfa_path):
                 comments = eval(comments)
                 for comment in comments:
                     comment_create_time, comment_content, comment_nickname, comment_uin = comment
+                    # 将评论人昵称和评论内容当中的QQ表情替换为img标签
+                    comment_nickname = re.sub(r'\[em\](.*?)\[/em\]', Tools.replace_em_to_img, comment_nickname)
+                    comment_content = re.sub(r'\[em\](.*?)\[/em\]', Tools.replace_em_to_img, comment_content)
                     comment_avatar_url = f"https://q.qlogo.cn/headimg_dl?dst_uin={comment_uin}&spec=640&img_type=jpg"
                     comment_html += comment_template.format(
                         avatar_url=comment_avatar_url,
