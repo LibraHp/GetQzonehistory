@@ -1,9 +1,7 @@
 import shutil
 from datetime import datetime
-import platform
 import subprocess
 from bs4 import BeautifulSoup
-from tqdm import trange
 import util.RequestUtil as Request
 import util.ToolsUtil as Tools
 import util.ConfigUtil as Config
@@ -23,6 +21,7 @@ other_message = list()
 user_message = list()
 leave_message = list()
 forward_message = list()
+
 
 # 信号处理函数
 def signal_handler(signal, frame):
@@ -72,7 +71,11 @@ def render_html(shuoshuo_path, zhuanfa_path):
             if len(content_lst) == 1:
                 continue
             nickname = content_lst[0]
+            # 将nickname当中的QQ表情替换为img标签
+            nickname = re.sub(r'\[em\](.*?)\[/em\]', Tools.replace_em_to_img, nickname)
             message = content_lst[1]
+            # 将message当中的QQ表情替换为img标签
+            message = re.sub(r'\[em\](.*?)\[/em\]', Tools.replace_em_to_img, message)
             image_html = '<div class="image">'
             for img_url in img_url_lst:
                 if img_url and img_url.startswith('http'):
@@ -87,6 +90,9 @@ def render_html(shuoshuo_path, zhuanfa_path):
                 comments = eval(comments)
                 for comment in comments:
                     comment_create_time, comment_content, comment_nickname, comment_uin = comment
+                    # 将评论人昵称和评论内容当中的QQ表情替换为img标签
+                    comment_nickname = re.sub(r'\[em\](.*?)\[/em\]', Tools.replace_em_to_img, comment_nickname)
+                    comment_content = re.sub(r'\[em\](.*?)\[/em\]', Tools.replace_em_to_img, comment_content)
                     comment_avatar_url = f"https://q.qlogo.cn/headimg_dl?dst_uin={comment_uin}&spec=640&img_type=jpg"
                     comment_html += comment_template.format(
                         avatar_url=comment_avatar_url,
@@ -135,23 +141,24 @@ def save_data():
         # 可见说说中可能存在多张图片
         item_pic_links = str(item[2]).split(",")
         for item_pic_link in item_pic_links:
-            if item_pic_link is not None and len(item_pic_link) > 0 and 'http' in item_pic_link:
-                # 保存图片
-                pic_name = re.sub(r'[\\/:*?"<>|]', '_', item_text) + '.jpg'
-                # 去除文件名中的空格
-                pic_name = pic_name.replace(' ', '')
-
-                # 限制文件名长度
-                if len(pic_name) > 40:
-                    pic_name = pic_name[:40] + '.jpg'
-                # pic_name = pic_name.split('：')[1] + '.jpg'
-                response = requests.get(item_pic_link)
-                if response.status_code == 200:
-                    # 防止图片重名
-                    if os.path.exists(pic_save_path + pic_name):
-                        pic_name = pic_name.split('.')[0] + "_" + str(int(time.time())) + '.jpg'
-                    with open(pic_save_path + pic_name, 'wb') as f:
-                        f.write(response.content)
+            # 如果图片链接为空或者不是http链接，则跳过
+            if not item_pic_link or len(item_pic_link) == 0 or 'http' not in item_pic_link:
+                continue
+            # 去除非法字符 / Emoji表情
+            pic_name = re.sub(r'\[em\].*?\[/em\]|[^\w\s]|[\\/:*?"<>|\r\n]+', '_', item_text).replace(" ", "") + '.jpg'
+            # 去除文件名中的空格
+            pic_name = pic_name.replace(' ', '')
+            # 限制文件名长度
+            if len(pic_name) > 40:
+                pic_name = pic_name[:40] + '.jpg'
+            # pic_name = pic_name.split('：')[1] + '.jpg'
+            response = requests.get(item_pic_link)
+            if response.status_code == 200:
+                # 防止图片重名
+                if os.path.exists(pic_save_path + pic_name):
+                    pic_name = pic_name.split('.')[0] + "_" + str(int(time.time())) + '.jpg'
+                with open(pic_save_path + pic_name, 'wb') as f:
+                    f.write(response.content)
         if user_nickname in item_text:
             if '留言' in item_text:
                 leave_message.append(item[:-1])
@@ -212,11 +219,6 @@ def open_file(file_path):
         print(f"Unsupported OS: {platform.system()}")
 
 
-def get_content_from_split(content):
-    content_split = str(content).split("：")
-    return content_split[1].strip() if len(content_split) > 1 else content.strip()
-
-
 if __name__ == '__main__':
     try:
         user_info = Request.get_login_user_info()
@@ -262,13 +264,13 @@ if __name__ == '__main__':
                         texts.append([put_time, text, img])
     except Exception as e:
         print(f"获取QQ空间互动消息发生异常: {str(e)}")
-    texts = [t + [""] for t in texts]   # 确保texts是四列, 防止后续保存结果出现问题
+    texts = [t + [""] for t in texts]  # 确保texts是四列, 防止后续保存结果出现问题
     try:
         user_moments = GetAllMoments.get_visible_moments_list()
         if user_moments and len(user_moments) > 0:
             # 如果可见说说的内容是从消息列表恢复的说说内容子集，则不添加到消息列表中
             texts = [t for t in texts if
-                     not any(get_content_from_split(u[1]) in get_content_from_split(t[1]) for u in user_moments)]
+                     not any(Tools.is_any_mutual_exist(t[1], u[1]) for u in user_moments)]
             texts.extend(user_moments)
     except Exception as err:
         print(f"获取未删除QQ空间记录发生异常: {str(err)}")

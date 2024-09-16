@@ -62,7 +62,6 @@ def show_author_info():
 
 def get_html_template():
     # HTML模板
-    # HTML模板
     html_template = """
     <!DOCTYPE html>
     <html lang="zh-CN">
@@ -108,17 +107,20 @@ def get_html_template():
             }}
             .image {{
                 margin-top: 10px;
-                display: flex;
-                justify-content: space-around;
-                align-items: center; /* 使两张图片垂直对齐 */
-                padding: 20px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr); /* 将图片分成3列 */
+                grid-gap: 10px; /* 设置图片之间的间距 */
+                justify-items: center; /* 居中显示图片 */
             }}
             .image img {{
-                max-width: 33vw;
-                max-height: 33vh;
+                width: 100%; /* 图片宽度100%填充父容器 */
+                height: auto; /* 固定高度150px */
+                object-fit: cover; /* 保持比例裁剪图片 */
+                max-width: 33vw; /* 限制图片的最大宽度 */
+                max-height: 33vh; /* 限制图片的最大高度 */
                 border-radius: 10px;
                 cursor: pointer;
-            }}
+            }} 
             .comments {{
                 margin-top: 5px; /* 调整这里的值来减少间距 */
                 background-color: #444;
@@ -229,3 +231,20 @@ def read_txt_file(workdir, file_name):
     return None
 
 
+# QQ空间表情替换 [em]xxx[/em] 为 <img src="http://qzonestyle.gtimg.cn/qzone/em/xxx.gif">
+def replace_em_to_img(match):
+    # 获取匹配的 xxx 部分
+    emoji_code = match.group(1)
+    return f'<img src="http://qzonestyle.gtimg.cn/qzone/em/{emoji_code}.gif" alt="{emoji_code}">'
+
+
+def get_content_from_split(content):
+    content_split = str(content).split("：")
+    return content_split[1].strip() if len(content_split) > 1 else content.strip()
+
+
+# 判断两个字符串是否存在互相包含的情况
+def is_any_mutual_exist(str1, str2):
+    str1 = get_content_from_split(str1)
+    str2 = get_content_from_split(str2)
+    return str1 in str2 or str2 in str1
