@@ -237,3 +237,14 @@ def replace_em_to_img(match):
     emoji_code = match.group(1)
     return f'<img src="http://qzonestyle.gtimg.cn/qzone/em/{emoji_code}.gif" alt="{emoji_code}">'
 
+
+def get_content_from_split(content):
+    content_split = str(content).split("：")
+    return content_split[1].strip() if len(content_split) > 1 else content.strip()
+
+
+# 判断两个字符串是否存在互相包含的情况
+def is_any_mutual_exist(str1, str2):
+    str1 = get_content_from_split(str1)
+    str2 = get_content_from_split(str2)
+    return str1 in str2 or str2 in str1

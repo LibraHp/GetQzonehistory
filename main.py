@@ -221,11 +221,6 @@ def open_file(file_path):
         print(f"Unsupported OS: {platform.system()}")
 
 
-def get_content_from_split(content):
-    content_split = str(content).split("：")
-    return content_split[1].strip() if len(content_split) > 1 else content.strip()
-
-
 if __name__ == '__main__':
     try:
         user_info = Request.get_login_user_info()
@@ -277,7 +272,7 @@ if __name__ == '__main__':
         if user_moments and len(user_moments) > 0:
             # 如果可见说说的内容是从消息列表恢复的说说内容子集，则不添加到消息列表中
             texts = [t for t in texts if
-                     not any(get_content_from_split(u[1]) in get_content_from_split(t[1]) for u in user_moments)]
+                     not any(Tools.is_any_mutual_exist(t[1], u[1]) for u in user_moments)]
             texts.extend(user_moments)
     except Exception as err:
         print(f"获取未删除QQ空间记录发生异常: {str(err)}")
