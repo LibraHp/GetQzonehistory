@@ -1,9 +1,63 @@
-# A getqzonehistory Flet app
+# QQ空间历史内容获取工具
 
-An example of a minimal Flet app.
+欢迎使用 **QQ空间历史内容获取工具**，一个强大且易用的应用，旨在帮助你轻松获取和管理你的QQ空间历史内容！无论你是想查看过去的动态，还是想整理好友的留言，这个工具都能满足你的需求。
 
-To run the app:
+---
 
-```
-flet run [app_directory]
-```
+## ✨ 功能亮点
+
+- **二维码登录**：只需扫描二维码，即可快速登录你的QQ空间，安全便捷！
+- **历史内容查看**：轻松浏览你和好友的历史动态，记录那些美好的瞬间。
+- **用户信息展示**：显示你的QQ头像、昵称等信息，让你在使用时拥有更好的体验。
+- **多种列表选项**：查看说说、留言、好友、转发、图片等多种内容，一应俱全。
+- **开放源代码**：完全免费且开源，欢迎大家参与贡献和讨论！
+
+---
+
+## 📦 安装步骤
+
+1. 确保你的环境中已安装 [Python](https://www.python.org/downloads/)。
+2. 克隆这个仓库：
+   ```bash
+   git clone https://github.com/LibraHp/GetQzonehistory.git
+   ```
+3. 安装所需依赖：
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. 运行程序：
+   ```bash
+   python main.py
+   ```
+
+---
+
+## 🚀 使用指南
+
+1. 打开程序后，使用手机QQ扫描二维码登录。
+2. 登录成功后，你将进入主界面，可以选择查看不同的内容。
+3. 在左侧标签页中选择想要查看的内容列表，享受你的QQ空间回忆之旅！
+
+---
+
+## 🛠️ 技术栈
+
+- **Flet**：用于构建现代化的图形用户界面。
+- **Requests**：轻松进行HTTP请求，获取QQ空间的数据。
+- **JSON**：处理和解析数据格式，使内容呈现更加灵活。
+
+---
+
+## 🙌 特别感谢
+
+感谢 [Flet](https://flet.dev) 和 [Requests](https://docs.python-requests.org/en/latest/) 的开发者们，你们的工具让开发变得如此简单与高效！
+
+---
+
+## 📬 联系我们
+
+如有任何问题或建议，请随时通过 [GitHub Issues](https://github.com/LibraHp/GetQzonehistory/issues) 联系我们。期待你的反馈与支持！
+
+---
+
+让我们一起重温QQ空间的美好回忆吧！🌟
