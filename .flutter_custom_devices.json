@@ -1,0 +1,46 @@
+{
+  "$schema": "file:///D:/Environment/flutter/2.2.3/packages/flutter_tools/static/custom-devices.schema.json",
+  "custom-devices": [
+    {
+      "id": "test1",
+      "label": "Test Device",
+      "sdkNameAndVersion": "Test Device 4 Model B+",
+      "disabled": true,
+      "ping": [
+        "ping",
+        "-w",
+        "500",
+        "-n",
+        "1",
+        "raspberrypi"
+      ],
+      "pingSuccessRegex": "ms TTL=",
+      "postBuild": null,
+      "install": [
+        "scp",
+        "-r",
+        "${localPath}",
+        "pi@raspberrypi:/tmp/${appName}"
+      ],
+      "uninstall": [
+        "ssh",
+        "pi@raspberrypi",
+        "rm -rf \"/tmp/${appName}\""
+      ],
+      "runDebug": [
+        "ssh",
+        "pi@raspberrypi",
+        "flutter-pi \"/tmp/${appName}\""
+      ],
+      "forwardPort": [
+        "ssh",
+        "-o",
+        "ExitOnForwardFailure=yes",
+        "-L",
+        "127.0.0.1:${hostPort}:127.0.0.1:${devicePort}",
+        "pi@raspberrypi"
+      ],
+      "forwardPortSuccessRegex": "Linux"
+    }
+  ]
+}
