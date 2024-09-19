@@ -3,8 +3,28 @@ import requests
 import base64
 import re
 import time
+import json
+import threading
 
-is_finsh = False
+# 全局header
+headers = {
+    'authority': 'user.qzone.qq.com',
+    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,'
+              'application/signed-exchange;v=b3;q=0.7',
+    'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
+    'cache-control': 'no-cache',
+    'pragma': 'no-cache',
+    'sec-ch-ua': '"Not A(Brand";v="99", "Microsoft Edge";v="121", "Chromium";v="121"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'none',
+    'sec-fetch-user': '?1',
+    'upgrade-insecure-requests': '1',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 '
+                  'Safari/537.36 Edg/121.0.0.0',
+}
 
 def bkn(pSkey):
     # 计算bkn
@@ -27,29 +47,6 @@ def ptqrToken(qrsig):
         i += 1
 
     return 2147483647 & e
-
-def QR():
-    # 获取 qq空间 二维码
-    url = 'https://ssl.ptlogin2.qq.com/ptqrshow?appid=549000912&e=2&l=M&s=3&d=72&v=4&t=0.8692955245720428&daid=5&pt_3rd_aid=0'
-
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # 确保请求成功
-
-        # 获取二维码图片的二进制内容
-        image_data = response.content
-        
-        # 将二进制内容转换为 Base64 编码
-        base64_image = base64.b64encode(image_data).decode('utf-8')
-
-        # 获取 qrsig (可选)
-        qrsig = requests.utils.dict_from_cookiejar(response.cookies).get('qrsig')
-
-        return base64_image, qrsig
-
-    except Exception as e:
-        print(e)
-        return None, None
 
 
 def create_card(img_url, title, subtitle):
@@ -74,6 +71,7 @@ def create_card(img_url, title, subtitle):
         )
     )
 
+
 def main(page: ft.Page):
     page.window.center()
     page.title = "QQ空间历史内容获取 v1.0 Powered by LibraHp"
@@ -82,7 +80,43 @@ def main(page: ft.Page):
     page.window.resizable = False
     page.padding = 20
     page.bgcolor = "#f0f0f0"
+    
+    def QR():
+    # 获取 qq空间 二维码
+        url = 'https://ssl.ptlogin2.qq.com/ptqrshow?appid=549000912&e=2&l=M&s=3&d=72&v=4&t=0.8692955245720428&daid=5&pt_3rd_aid=0'
 
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # 确保请求成功
+
+            # 获取二维码图片的二进制内容
+            image_data = response.content
+            
+            # 将二进制内容转换为 Base64 编码
+            base64_image = base64.b64encode(image_data).decode('utf-8')
+
+            # 获取 qrsig (可选)
+            qrsig = requests.utils.dict_from_cookiejar(response.cookies).get('qrsig')
+            page.session.set("qrsig", qrsig)
+            return base64_image
+
+        except Exception as e:
+            print(e)
+            return None
+        
+    def get_login_user_info():
+        cookies = page.session.get("user_cookies")
+        g_tk = bkn(cookies['p_skey'])
+        uin = re.sub(r'o0*', '', cookies.get('uin'))
+        response = requests.get('https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?g_tk=' + str(g_tk) + '&uins=' + uin,
+                                headers=headers, cookies=cookies)
+        info = response.content.decode('GBK')
+        info = info.strip().lstrip('portraitCallBack(').rstrip(');')
+        info = json.loads(info)
+        user_info.content.controls[0].src = f'http://q1.qlogo.cn/g?b=qq&nk={uin}&s=100'
+        user_info.content.controls[1].value = info[uin][6]
+        page.update()
+    
     # 路由改变函数
     def change_route(e):
         selected_tab = e.control.data
@@ -103,20 +137,21 @@ def main(page: ft.Page):
 
         page.update()
 
+    def unlock_tabs():
+        for tab in tabs.controls:
+            tab.disabled = False
     # 获取内容页面
     def create_get_content_page():
-        base64_image, qrsig = QR()
-        
+        base64_image = QR()
         # 更新二维码状态的函数（模拟，需实际实现逻辑）
         def update_qr_code_status(e):
-            ptqrtoken = ptqrToken(qrsig)
+            ptqrtoken = ptqrToken(page.session.get("qrsig"))
             url = 'https://ssl.ptlogin2.qq.com/ptqrlogin?u1=https%3A%2F%2Fqzs.qq.com%2Fqzone%2Fv5%2Floginsucc.html%3Fpara' \
               '%3Dizone&ptqrtoken=' + str(ptqrtoken) + '&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-' \
               + str(time.time()) + '&js_ver=20032614&js_type=1&login_sig=&pt_uistyle=40&aid=549000912&daid=5&'
-            cookies = {'qrsig': qrsig}
+            cookies = {'qrsig': page.session.get("qrsig")}
             try:
                 r = requests.get(url, cookies=cookies)
-                print(r.text)
                 if '二维码未失效' in r.text:
                     qr_status.value = "二维码状态：未失效"
                     pass
@@ -140,10 +175,10 @@ def main(page: ft.Page):
                     try:
                         r = requests.get(url, cookies=cookies, allow_redirects=False)
                         target_cookies = requests.utils.dict_from_cookiejar(r.cookies)
-                        print(target_cookies)
-                        p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
-                        is_finsh = True
-                        page.update()
+                        page.session.set("user_cookies", target_cookies)
+                        get_login_user_info()
+                        unlock_tabs()
+                        # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
                     except Exception as e:
                         print(e)
             except Exception as e:
@@ -153,15 +188,24 @@ def main(page: ft.Page):
 
         # 获取新的二维码的函数（模拟，需实际实现逻辑）
         def refresh_qr_code(e):
-            base64_image, qrsig = QR()
+            base64_image = QR()
             # 刷新已渲染的图片
             qr_image.src_base64 = base64_image
             qr_status.value = "二维码状态：等待扫描"  # 重置状态为等待扫描
             page.update()
 
-        qr_image = ft.Image(src_base64=base64_image, width=200, height=200)
+        qr_image = ft.Image(src_base64=base64_image, width=200, height=200,fit=ft.ImageFit.CONTAIN)
         qr_status = ft.Text("二维码状态：等待扫描", size=16, color="green")
-
+        def task():
+            while True:
+                # 使用 in 分别检查多个条件
+                if any(status in qr_status.value for status in ['已登录', '已拒绝', '已失效']):
+                    break
+                print(qr_status.value)
+                update_qr_code_status(None)
+                time.sleep(2)
+        thread = threading.Thread(target=task)
+        thread.start()
         # 返回一个包含二维码和状态更新的布局
         return ft.Column(
             controls=[
@@ -180,7 +224,6 @@ def main(page: ft.Page):
             horizontal_alignment="center",
             expand=True,
         )
-
     # 用户信息
     user_info = ft.Container(
         content=ft.Column(
@@ -195,16 +238,18 @@ def main(page: ft.Page):
         padding=20
     )
 
+
+
     # 左侧标签页
     tabs = ft.Column(
         controls=[
             ft.ElevatedButton("获取内容", on_click=change_route, data="GetContent", width=200),
-            ft.ElevatedButton("说说列表", on_click=change_route, data="User", width=200, disabled=not is_finsh),
-            ft.ElevatedButton("留言列表", on_click=change_route, data="Leave", width=200, disabled=not is_finsh),
-            ft.ElevatedButton("好友列表", on_click=change_route, data="Friends", width=200, disabled=not is_finsh),
-            ft.ElevatedButton("转发列表", on_click=change_route, data="Forward", width=200, disabled=not is_finsh),
-            ft.ElevatedButton("其他列表", on_click=change_route, data="Other", width=200, disabled=not is_finsh),
-            ft.ElevatedButton("图片列表", on_click=change_route, data="Pictures", width=200, disabled=not is_finsh),
+            ft.ElevatedButton("说说列表", on_click=change_route, data="User", width=200, disabled=True),
+            ft.ElevatedButton("留言列表", on_click=change_route, data="Leave", width=200, disabled=True),
+            ft.ElevatedButton("好友列表", on_click=change_route, data="Friends", width=200, disabled=True),
+            ft.ElevatedButton("转发列表", on_click=change_route, data="Forward", width=200, disabled=True),
+            ft.ElevatedButton("其他列表", on_click=change_route, data="Other", width=200, disabled=True),
+            ft.ElevatedButton("图片列表", on_click=change_route, data="Pictures", width=200, disabled=True),
             ft.Column(
                 controls=[
                     ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp"),
@@ -220,6 +265,8 @@ def main(page: ft.Page):
         alignment="start",
         spacing=10
     )
+
+
 
     # 左侧标签容器
     left_panel = ft.Container(
@@ -264,7 +311,7 @@ def main(page: ft.Page):
         expand=True,
         alignment="start"
     )
-
+    
     page.add(main_layout)
 
 
