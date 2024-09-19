@@ -282,7 +282,7 @@ def main(page: ft.Page):
     )
 
     try:
-        home_content_md = requests.get("https://raw.githubusercontent.com/LibraHp/GetQzonehistory/main/README.MD").text
+        home_content_md = requests.get("https://raw.githubusercontent.com/LibraHp/GetQzonehistory/gui/README.md").text
     except:
         home_content_md = "获取失败"
     # 路由容器
