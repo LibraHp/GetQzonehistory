@@ -5,6 +5,7 @@ import re
 import time
 import json
 import threading
+from bs4 import BeautifulSoup
 
 # 全局header
 headers = {
@@ -48,6 +49,44 @@ def ptqrToken(qrsig):
 
     return 2147483647 & e
 
+def extract_string_between(source_string, start_string, end_string):
+    start_index = source_string.find(start_string) + len(start_string)
+    end_index = source_string.find(end_string)
+    extracted_string = source_string[start_index:-37]
+    return extracted_string
+
+def replace_multiple_spaces(string):
+    pattern = r'\s+'
+    replaced_string = re.sub(pattern, ' ', string)
+    return replaced_string
+
+def process_old_html(message):
+    def replace_hex(match):
+        hex_value = match.group(0)
+        byte_value = bytes(hex_value, 'utf-8').decode('unicode_escape')
+        return byte_value
+
+    new_text = re.sub(r'\\x[0-9a-fA-F]{2}', replace_hex, message)
+    start_string = "html:'"
+    end_string = "',opuin"
+    new_text = extract_string_between(new_text, start_string, end_string)
+    new_text = replace_multiple_spaces(new_text).replace('\\', '')
+    return new_text
+
+class User:
+    def __init__(self, uin, username):
+        self.uin = uin
+        self.avatar_url = f'http://q1.qlogo.cn/g?b=qq&nk={uin}&s=100'
+        self.username = username
+        self.link = f'https://user.qzone.qq.com/{uin}/'
+
+    def get_controls(self):
+        return [
+            ft.Image(src=self.avatar_url, border_radius=100),
+            ft.Text(self.username),
+            ft.Text(self.link),
+        ]
+
 
 def create_card(img_url, title, subtitle):
     return ft.Card(
@@ -80,7 +119,28 @@ def main(page: ft.Page):
     page.window.resizable = False
     page.padding = 20
     page.bgcolor = "#f0f0f0"
+    # page.window.icon = "https://picsum.photos/200"
+    # 字体使用系统默认字体
+    page.theme= ft.Theme(font_family="Microsoft YaHei")
     
+    def handle_close(e):
+        page.close(dlg_modal)
+        print("Modal dialog closed with action: ", e.control.text)
+
+    dlg_modal = ft.AlertDialog(
+        modal=True,
+        title=ft.Text("TIPS"),
+        content=ft.Text("确定要退出登录吗？"),
+        actions=[
+            ft.TextButton("Yes", on_click=handle_close),
+            ft.TextButton("No", on_click=handle_close),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+        on_dismiss=lambda e: page.add(
+            # 弹窗
+
+        ),
+    )
     def QR():
     # 获取 qq空间 二维码
         url = 'https://ssl.ptlogin2.qq.com/ptqrshow?appid=549000912&e=2&l=M&s=3&d=72&v=4&t=0.8692955245720428&daid=5&pt_3rd_aid=0'
@@ -116,6 +176,37 @@ def main(page: ft.Page):
         user_info.content.controls[0].src = f'http://q1.qlogo.cn/g?b=qq&nk={uin}&s=100'
         user_info.content.controls[1].value = info[uin][6]
         page.update()
+
+    def get_user_messages(count):
+        for i in range(int(count / 100) + 1):
+            message = get_message(i * 100, 100).content.decode('utf-8')
+            time.sleep(0.2)
+            html = process_old_html(message)
+            if "li" not in html:
+                continue
+            soup = BeautifulSoup(html, 'html.parser')
+            for element in soup.find_all('li', class_='f-single f-s-s'):
+                put_time = None
+                text = None
+                img = None
+                friend_element = element.find('a', class_='f-name q_namecard')
+                # 获取好友昵称和QQ
+                if friend_element is not None:
+                    friend_name = friend_element.get_text()
+                    friend_qq = friend_element.get('link')[9:]
+                    friend_link = friend_element.get('href')
+                    if friend_qq not in [sublist[1] for sublist in all_friends]:
+                        all_friends.append([friend_name, friend_qq, friend_link])
+                time_element = element.find('div', class_='info-detail')
+                text_element = element.find('p', class_='txt-box-title ellipsis-one')
+                img_element = element.find('a', class_='img-item')
+                if time_element is not None and text_element is not None:
+                    put_time = time_element.get_text().replace('\xa0', ' ')
+                    text = text_element.get_text().replace('\xa0', ' ')
+                    if img_element is not None:
+                        img = img_element.find('img').get('src')
+                    if text not in [sublist[1] for sublist in texts]:
+                        texts.append([put_time, text, img])
     
     # 路由改变函数
     def change_route(e):
@@ -134,12 +225,22 @@ def main(page: ft.Page):
             content_area.content = ft.Text("其他列表", size=30)
         elif selected_tab == "Pictures":
             content_area.content = ft.Text("图片列表", size=30)
+        elif selected_tab == "Logout":
+            page.open(dlg_modal)
 
         page.update()
 
     def unlock_tabs():
         for tab in tabs.controls:
             tab.disabled = False
+
+    def show_login_content():
+        for content in content_area.content.controls:
+            if content.data == 'not_login':
+                content.visible = False
+            elif content.data == 'login':
+                content.visible = True
+                
     # 获取内容页面
     def create_get_content_page():
         base64_image = QR()
@@ -176,8 +277,11 @@ def main(page: ft.Page):
                         r = requests.get(url, cookies=cookies, allow_redirects=False)
                         target_cookies = requests.utils.dict_from_cookiejar(r.cookies)
                         page.session.set("user_cookies", target_cookies)
+                        page.snack_bar = ft.SnackBar(ft.Text(f"登录成功,欢迎您 {target_cookies.get('uin')}"),duration=2000)
+                        page.snack_bar.open = True
                         get_login_user_info()
                         unlock_tabs()
+                        show_login_content()
                         # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
                     except Exception as e:
                         print(e)
@@ -194,8 +298,8 @@ def main(page: ft.Page):
             qr_status.value = "二维码状态：等待扫描"  # 重置状态为等待扫描
             page.update()
 
-        qr_image = ft.Image(src_base64=base64_image, width=200, height=200,fit=ft.ImageFit.CONTAIN)
-        qr_status = ft.Text("二维码状态：等待扫描", size=16, color="green")
+        qr_image = ft.Image(src_base64=base64_image, width=200, height=200,fit=ft.ImageFit.CONTAIN, data='not_login')
+        qr_status = ft.Text("二维码状态：等待扫描", size=16, color="green", data='not_login')
         def task():
             while True:
                 # 使用 in 分别检查多个条件
@@ -206,10 +310,16 @@ def main(page: ft.Page):
                 time.sleep(2)
         thread = threading.Thread(target=task)
         thread.start()
+        content_items = ["内容1", "内容2", "内容3", "内容4","内容5","内容6"]
+        total_progress = 0.75  # 进度值
+
+        # 创建界面并添加卡片列表
+        card_list_view = create_card_list_view(content_items, total_progress)
         # 返回一个包含二维码和状态更新的布局
         return ft.Column(
             controls=[
-                ft.Text("请使用手机QQ扫码登录", size=24, weight="bold"),
+                card_list_view,
+                ft.Text("请使用手机QQ扫码登录", size=24, weight="bold", data='not_login'),
                 qr_image,  # 展示二维码
                 qr_status,  # 展示二维码状态
                 ft.Row(
@@ -218,12 +328,98 @@ def main(page: ft.Page):
                         ft.ElevatedButton("更新状态", on_click=update_qr_code_status),
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
+                    data='not_login'
                 ),
             ],
             alignment="center",
             horizontal_alignment="center",
             expand=True,
         )
+    
+    def get_message(start, count):
+        cookies = page.session.get("user_cookies")
+        g_tk = bkn(cookies['p_skey'])
+        uin = re.sub(r'o0*', '', cookies.get('uin'))
+        params = {
+            'uin': uin,
+            'begin_time': '0',
+            'end_time': '0',
+            'getappnotification': '1',
+            'getnotifi': '1',
+            'has_get_key': '0',
+            'offset': start,
+            'set': '0',
+            'count': count,
+            'useutf8': '1',
+            'outputhtmlfeed': '1',
+            'scope': '1',
+            'format': 'jsonp',
+            'g_tk': [
+                g_tk,
+                g_tk,
+            ],
+        }
+        
+        try:
+            response = requests.get(
+                'https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds2_html_pav_all',
+                params=params,
+                cookies=cookies,
+                headers=headers,
+                timeout=(5, 10)  # 设置连接超时为5秒，读取超时为10秒
+            )
+        except requests.Timeout:
+            return None
+        
+        return response
+    
+    def get_message_count():
+        # 初始的总量范围
+        lower_bound = 0
+        upper_bound = 10000000  # 假设最大总量为1000000
+        total = upper_bound // 2  # 初始的总量为上下界的中间值
+        while lower_bound <= upper_bound:
+            response = get_message(total, 100)
+            if "li" in response.text:
+                # 请求成功，总量应该在当前总量的右侧
+                lower_bound = total + 1
+            else:
+                # 请求失败，总量应该在当前总量的左侧
+                upper_bound = total - 1
+            total = (lower_bound + upper_bound) // 2  # 更新总量为新的中间值
+        return total
+    
+    def create_card_list_view(content_items, total_progress):
+        """
+        创建带有总进度条和卡片列表的Flet组件
+        :param content_items: 一个列表，包含需要展示的内容
+        :param total_progress: 获取内容的总进度值（0 到 1 之间的小数）
+        :return: 包含进度条和卡片列表的Flet组件
+        """
+        # 创建一个进度条组件，进度为 total_progress
+        progress_bar = ft.ProgressBar(value=total_progress, width=400)
+
+        # 创建一个空的卡片列表，用于存放所有卡片
+        card_list = ft.Column(scroll=ft.ScrollMode.AUTO)
+
+        # 遍历 content_items 列表，为每个内容创建一个卡片并加入卡片列表
+        for index, item in enumerate(content_items):
+            # 每个卡片展示内容的名称或信息
+            card = create_card("https://picsum.photos/200", item, f"Content {index + 1}")
+            # 将卡片添加到卡片列表中
+            card_list.controls.append(card)
+
+        # 返回一个包含进度条和卡片列表的组件（Column 布局）
+        return ft.Column([
+                ft.Text("正在获取消息列表数量...", style="headlineSmall"),  # 标题
+                progress_bar,  # 进度条
+                card_list,  # 卡片列表
+            ],
+            data='login',
+            visible=False
+        )
+    
+
     # 用户信息
     user_info = ft.Container(
         content=ft.Column(
@@ -238,8 +434,6 @@ def main(page: ft.Page):
         padding=20
     )
 
-
-
     # 左侧标签页
     tabs = ft.Column(
         controls=[
@@ -250,30 +444,20 @@ def main(page: ft.Page):
             ft.ElevatedButton("转发列表", on_click=change_route, data="Forward", width=200, disabled=True),
             ft.ElevatedButton("其他列表", on_click=change_route, data="Other", width=200, disabled=True),
             ft.ElevatedButton("图片列表", on_click=change_route, data="Pictures", width=200, disabled=True),
-            ft.Column(
-                controls=[
-                    ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp"),
-                    ft.TextButton("Bilibili @高数带我飞", url="https://space.bilibili.com/1117414477"),
-                    ft.Text("程序完全免费且开源！", size=12, color="red", text_align="center")
-                ],
-                alignment="center",
-                horizontal_alignment="center",
-                width=200
-            )
+            ft.ElevatedButton("退出当前账号登录", on_click=change_route, data="Logout", width=200),
+            ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", width=200),
         ],
-        scroll=True,
         alignment="start",
         spacing=10
     )
-
-
 
     # 左侧标签容器
     left_panel = ft.Container(
         content=ft.Column(
             controls=[user_info, tabs],
-            spacing=30,
-            horizontal_alignment="start"
+            spacing=20,
+            horizontal_alignment="start",
+            scroll=ft.ScrollMode.HIDDEN
         ),
         width=220,
         bgcolor="#ffffff",
@@ -297,7 +481,7 @@ def main(page: ft.Page):
                 ),
             ],
             expand=True,
-            scroll=True
+            scroll=ft.ScrollMode.HIDDEN
         ),
         bgcolor="#ffffff",
         expand=True,
