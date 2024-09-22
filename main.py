@@ -377,7 +377,7 @@ def main(page: ft.Page):
             return base64_image
 
         except Exception as e:
-            print(e)
+            log(e, "error")
             return None
         
     def get_login_user_info():
@@ -479,9 +479,9 @@ def main(page: ft.Page):
                         create_card_list_view(progress_bar, login_text)
                         # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
                     except Exception as e:
-                        print(e)
+                        log(e,"error")
             except Exception as e:
-                print(e)
+                log(e,"error")
 
             page.update()
 
@@ -832,15 +832,21 @@ def main(page: ft.Page):
         alignment="start"
     )
 
-    def log(message):
+    def log(message,type="info"):
         now = time.strftime("%Y-%m-%d %H:%M:%S")
         log_list.value = f"{now} - {message}"
+        if type == "success":
+            log_list.color = "green"
+        elif type == "error":
+            log_list.color = "red"
+        else:
+            log_list.color = "blue"
         page.update()
 
     log_list = ft.Text(size=12, color="blue")
     page.add(main_layout)
     page.add(log_list)
-    log("开始运行...")
+    log("开始运行...","success")
 
 
 if __name__ == "__main__":
