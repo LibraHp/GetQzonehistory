@@ -8,6 +8,18 @@ import json
 import threading
 from bs4 import BeautifulSoup
 
+# 初始化所有消息列表
+all_messages = []
+# 初始化说说列表
+user_says = []
+# 初始化好友列表
+friends = []
+# 初始化转发列表
+forward = []
+# 初始化留言列表
+leaves = []
+
+other = []
 # 全局header
 headers = {
     'authority': 'user.qzone.qq.com',
@@ -89,12 +101,170 @@ def parse_time_strings(time_str):
     return None
 
 
+def clean_content():
+    global all_messages, user_says, forward, leaves, other, friends
+    # 好友去重
+    friends = list({item.uin: item for item in friends}.values())
+    for message in all_messages:
+        message_type = message.type
+        if '留言' in message_type:
+            leaves.append(message)
+        elif '赞' in message_type:
+            user_says.append(message)
+        elif '转发' in message_type:
+            forward.append(message)
+        else:
+            other.append(message)
+
+
+class PaginatedContainer(ft.UserControl):
+    def __init__(self, data, items_per_page=5, title="Title"):
+        super().__init__()
+        self.data = data
+        self.items_per_page = items_per_page
+        self.title = title
+        self.current_page = 1
+        self.total_pages = (len(data) - 1) // items_per_page + 1
+
+        # 页面内容显示区域
+        self.content_area = ft.Column(spacing=10, expand=True)
+        # 页码显示区域
+        self.page_info = ft.Text()
+
+        # 上一页按钮
+        self.prev_button = ft.ElevatedButton("<", on_click=self.previous_page)
+        # 下一页按钮
+        self.next_button = ft.ElevatedButton(">", on_click=self.next_page)
+
+    def build(self):
+        return ft.Column(
+            [
+                ft.Row(
+                    controls=[
+                        ft.Text(self.title, size=20,weight="bold"),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                # 主要内容区域
+                ft.Container(
+                    content=self.content_area,
+                    expand=True,
+                    padding=ft.padding.all(10),
+                    alignment=ft.alignment.center,
+                ),
+                # 底部分页栏
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            self.prev_button,
+                            self.page_info,
+                            self.next_button,
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20,
+                    ),
+                    height=20,
+                    alignment=ft.alignment.center,
+                ),
+            ],
+            expand=True,
+        )
+
+    def did_mount(self):
+        """This method is called when the control is added to the page."""
+        self.update_page_info()
+
+    def update_page_info(self):
+        # 更新当前页的内容
+        self.load_page_data()
+        # 更新页码信息
+        self.page_info.value = f"Page {self.current_page} of {self.total_pages}"
+        # 更新按钮状态
+        self.prev_button.disabled = self.current_page == 1
+        self.next_button.disabled = self.current_page == self.total_pages
+        self.update()
+
+    def load_page_data(self):
+        # 获取当前页的数据
+        start = (self.current_page - 1) * self.items_per_page
+        end = start + self.items_per_page
+        current_data = self.data[start:end]
+
+        # 清空当前内容并重新加载卡片
+        self.content_area.controls.clear()
+        # 定义一个容器来存放所有的卡片，使用 Column 容器来纵向排列三行
+        rows = ft.Column(spacing=10, expand=True)
+
+        # 每一行是一个 Row，包含两个 Card
+        current_row = ft.Row(spacing=10, expand=True)
+        row_count = 0
+
+        for index, item in enumerate(current_data):
+            # 创建每个 Card
+            card = ft.Card(
+                content=ft.Row(
+                    controls=[
+                        ft.Image(src=item.avatar_url, fit=ft.ImageFit.COVER,border_radius=100),
+                        ft.Column(
+                            controls=[
+                                ft.Text(item.username, size=18, weight="bold"),
+                                ft.Text(f'QQ: {item.uin}', size=14),
+                                ft.Text(item.link, size=12, color=ft.colors.BLUE_500),
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            # horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            spacing=4,
+                        )
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=10,
+                    expand=True
+                ),
+                expand=True,
+            )
+
+            # 将 Card 添加到当前行
+            current_row.controls.append(card)
+
+            # 检查当前行是否已达到两列
+            if len(current_row.controls) == 2:
+                # 将当前行添加到容器中
+                rows.controls.append(current_row)
+                # 创建新的一行
+                current_row = ft.Row(spacing=10, expand=True)
+                row_count += 1
+
+            # 如果达到了三行，就结束布局（可选，控制最多显示三行）
+            if row_count == 3:
+                break
+
+        # 检查最后一行是否有剩余卡片且未添加
+        if current_row.controls:
+            rows.controls.append(current_row)
+
+        # 最终将所有卡片的布局添加到 content_area
+        self.content_area.controls.append(rows)
+
+
+    def next_page(self, e):
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            self.update_page_info()
+
+    def previous_page(self, e):
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.update_page_info()
+
 class User:
     def __init__(self, uin, username):
-        self.uin = uin
-        self.avatar_url = f'http://q1.qlogo.cn/g?b=qq&nk={uin}&s=100'
+        self.uin = str(uin)  # 将 uin 转换为字符串
+        self.avatar_url = f'http://q1.qlogo.cn/g?b=qq&nk={self.uin}&s=100'  # 使用 self.uin
         self.username = username
-        self.link = f'https://user.qzone.qq.com/{uin}/'
+        self.link = f'https://user.qzone.qq.com/{self.uin}/'  # 使用 self.uin
+
+    def __str__(self):
+        return f'Uin: {self.uin}, Username: {self.username}, Link: {self.link}, Avatar URL: {self.avatar_url}'
     
 
 class Comment:
@@ -112,6 +282,17 @@ class Message:
         self.content = content
         self.images = images
         self.comment = comment
+
+    def __str__(self):
+        user_info = f"User: {self.user.username if self.user else 'Unknown'}"
+        time_info = f"Time: {self.time}" if self.time else "Time: Not set"
+        content_info = f"Content: {self.content}" if self.content else "Content: Not set"
+        type_info = f"Type: {self.type}" if self.type else "Type: Not set"
+        comment_info = f"Comment: {self.comment.content}" if self.comment and self.comment.content else "Comment: Not set"
+        images_info = f"Images: {self.images}" if self.images else "Images: Not set"
+
+        return f"{user_info}\n{time_info}\n{content_info}\n{type_info}\n{comment_info}\n{images_info}"
+
 
 
 def create_card(img_url, title, subtitle):
@@ -222,7 +403,7 @@ def main(page: ft.Page):
         elif selected_tab == "Leave":
             content_area.content = ft.Text("留言列表", size=30)
         elif selected_tab == "Friends":
-            content_area.content = ft.Text("好友列表", size=30)
+            content_area.content = PaginatedContainer(friends, items_per_page=6,title="好友列表")
         elif selected_tab == "Forward":
             content_area.content = ft.Text("转发列表", size=30)
         elif selected_tab == "Other":
@@ -341,7 +522,7 @@ def main(page: ft.Page):
                     data='not_login'
                 ),
                 ft.Text("获取空间消息中...", size=24, weight="bold", data='login_text',visible=False),
-                ft.ProgressBar(data='login_progress', visible=False),
+                ft.ProgressBar(data='login_progress', visible=False,bar_height=10,border_radius=10),
             ],
             alignment="center",
             horizontal_alignment="center",
@@ -422,19 +603,19 @@ def main(page: ft.Page):
                 text = None
                 img = None
                 message_type = None
-                friend = User()
-                comment = Comment()
-                res_message = Message()
+                friend = None
+                comment = Comment(user=None, time=None, content=None)
+                res_message = Message(user=None, type=None, time=None, content=None, images=None, comment=None)
                 friend_element = element.find('a', class_='f-name q_namecard')
                 # 获取好友昵称和QQ
                 if friend_element is not None:
                     friend_name = friend_element.get_text()
                     friend_qq = friend_element.get('link')[9:]
                     # friend_link = friend_element.get('href')
-                    friend.uin = friend_qq
-                    friend.username = friend_name
+                    friend = User(uin=friend_qq, username=friend_name)
                     comment.user = friend
                     res_message.user = friend
+                    friends.append(friend)
                 time_element = element.find('div', class_='info-detail')
                 text_element = element.find('p', class_='txt-box-title ellipsis-one')
                 img_element = element.find('a', class_='img-item')
@@ -446,7 +627,7 @@ def main(page: ft.Page):
                 if comment_element is not None:
                     comment_time_element = comment_element.find('span', class_='ui-mr10 state')
                     comment.time = parse_time_strings(comment_time_element.get_text())
-                    comment_text = comment_element.find(text=True, recursive=False).strip()
+                    comment_text = comment_element.get_text()
                     comment.content = comment_text
                     res_message.comment = comment
                 if time_element is not None and text_element is not None:
@@ -455,7 +636,6 @@ def main(page: ft.Page):
                     res_message.time = put_time
                     text = text_element.get_text().replace('\xa0', ' ')
                     res_message.content = text
-                    log(f'{message_type} - {put_time} - {text}')
                     # log(f"{put_time} - {text}")
                     if img_element is not None:
                         img = img_element.find('img').get('src')
@@ -463,11 +643,15 @@ def main(page: ft.Page):
                         img = str(img).replace(r"!/m/", "!/s/")
                         res_message.images = img
                     # if text not in [sublist[1] for sublist in texts]:
-                print(res_message)
+                all_messages.append(res_message)
                 progress_bar.value = i / int(count / 100)
+                # 百分比进度，保留两位小数
+                # progress_bar.value = round(progress_bar.value, 2)
+                log(f'当前进度：{round(i / int(count / 100), 3) * 100}%')
                 page.update()
         login_text.value = "获取成功！"
         progress_bar.visible = False
+        clean_content()
         unlock_tabs()
         content_area.content.controls.append(get_message_result())
         page.update()
@@ -479,7 +663,7 @@ def main(page: ft.Page):
                     controls=[
                         ft.Card(
                             content=ft.Container(
-                                content=ft.Text("说说共有 " + str(889) + " 条", size=25),
+                                content=ft.Text("说说共有 " + str(all_messages.__len__()) + " 条", size=25),
                                 padding=20,
                                 alignment=ft.alignment.center,
                             ),
@@ -489,7 +673,7 @@ def main(page: ft.Page):
                         ),
                         ft.Card(
                             content=ft.Container(
-                                content=ft.Text("留言共有 " + str(889) + " 条", size=25),
+                                content=ft.Text("留言共有 " + str(leaves.__len__()) + " 条", size=25),
                                 padding=20,
                                 alignment=ft.alignment.center,
                             ),
@@ -543,7 +727,7 @@ def main(page: ft.Page):
                         ),
                         ft.Card(
                             content=ft.Container(
-                                content=ft.Text("好友共有 " + str(889) + " 位", size=25),
+                                content=ft.Text("好友共有 " + str(friends.__len__()) + " 位", size=25),
                                 padding=20,
                                 alignment=ft.alignment.center,
                             ),
@@ -569,8 +753,6 @@ def main(page: ft.Page):
             spacing=20,  # 控制每行之间的间距
             expand=True,
         )
-
-
 
 
 
