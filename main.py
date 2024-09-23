@@ -18,8 +18,11 @@ friends = []
 forward = []
 # 初始化留言列表
 leaves = []
-
+# 初始换其他列表
 other = []
+
+now_login_user = None
+
 # 全局header
 headers = {
     'authority': 'user.qzone.qq.com',
@@ -102,19 +105,27 @@ def parse_time_strings(time_str):
 
 
 def clean_content():
-    global all_messages, user_says, forward, leaves, other, friends
+    global all_messages, user_says, forward, leaves, other, friends, now_login_user
     # 好友去重
     friends = list({item.uin: item for item in friends}.values())
+    all_messages = list({item.content: item for item in all_messages}.values())
     for message in all_messages:
-        message_type = message.type
-        if '留言' in message_type:
-            leaves.append(message)
-        elif '赞' in message_type:
-            user_says.append(message)
-        elif '转发' in message_type:
-            forward.append(message)
-        else:
-            other.append(message)
+        try:
+            message_type = message.type
+            if '留言' in message_type:
+                message.content = message.content.replace(now_login_user.username, '')
+                leaves.append(message)
+            elif now_login_user.username in message.content:
+                message.user = now_login_user
+                message.content = message.content.replace(now_login_user.username + ' ：', '')
+                user_says.append(message)
+            elif '转发' in message_type:
+                forward.append(message)
+            else:
+                other.append(message)
+                message.content = message.content.replace(message.user.username + ' ：', '')
+        except Exception as e:
+            print(e)
 
 
 class PaginatedContainer(ft.UserControl):
@@ -142,8 +153,9 @@ class PaginatedContainer(ft.UserControl):
                 ft.Row(
                     controls=[
                         ft.Text(self.title, size=20,weight="bold"),
+                        ft.ElevatedButton("导出"),
                     ],
-                    alignment=ft.MainAxisAlignment.CENTER,
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                 ),
                 # 主要内容区域
                 ft.Container(
@@ -163,7 +175,7 @@ class PaginatedContainer(ft.UserControl):
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=20,
                     ),
-                    height=20,
+                    height=30,
                     alignment=ft.alignment.center,
                 ),
             ],
@@ -200,28 +212,60 @@ class PaginatedContainer(ft.UserControl):
         row_count = 0
 
         for index, item in enumerate(current_data):
-            # 创建每个 Card
-            card = ft.Card(
-                content=ft.Row(
-                    controls=[
-                        ft.Image(src=item.avatar_url, fit=ft.ImageFit.COVER,border_radius=100),
-                        ft.Column(
-                            controls=[
-                                ft.Text(item.username, size=18, weight="bold"),
-                                ft.Text(f'QQ: {item.uin}', size=14),
-                                ft.Text(item.link, size=12, color=ft.colors.BLUE_500),
-                            ],
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            # horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            spacing=4,
-                        )
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=10,
-                    expand=True
-                ),
-                expand=True,
-            )
+            if isinstance(item, User):
+                # 创建 User Card
+                card = ft.Card(
+                    content=ft.Row(
+                        controls=[
+                            ft.Image(src=item.avatar_url, fit=ft.ImageFit.COVER, border_radius=100),
+                            ft.Column(
+                                controls=[
+                                    ft.Text(item.username, size=18, weight="bold"),
+                                    ft.Text(f'QQ: {item.uin}', size=14),
+                                    ft.Text(item.link, size=12, color=ft.colors.BLUE_500),
+                                ],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                spacing=4,
+                            )
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=10,
+                        expand=True
+                    ),
+                    expand=True,
+                )
+            elif isinstance(item, Message):
+                # 创建 Message Card
+                controls = [
+                    ft.Image(src=item.user.avatar_url, fit=ft.ImageFit.COVER, border_radius=100),
+                    ft.Column(
+                        controls=[
+                            ft.Text(item.user.username, size=18, weight="bold"),
+                            ft.Text(f'{item.time}', size=14),
+                            ft.Text(item.content, size=12,width=300),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=4,
+                    )
+                ]
+
+                # 如果存在图片，添加到 controls 中
+                if item.images:
+                    controls[1].controls.append(ft.Image(src=item.images, fit=ft.ImageFit.COVER,height=300,width=300))
+
+                # 如果存在评论，添加到 controls 中
+                if item.comment:
+                    controls[1].controls.append(ft.Text(f'{item.comment.content}', size=12, color=ft.colors.BLUE_700,width=300))
+
+                card = ft.Card(
+                    content=ft.Row(
+                        controls=controls,
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=10,
+                        expand=True
+                    ),
+                    expand=True,
+                )
 
             # 将 Card 添加到当前行
             current_row.controls.append(card)
@@ -244,6 +288,7 @@ class PaginatedContainer(ft.UserControl):
 
         # 最终将所有卡片的布局添加到 content_area
         self.content_area.controls.append(rows)
+
 
 
     def next_page(self, e):
@@ -295,29 +340,6 @@ class Message:
 
 
 
-def create_card(img_url, title, subtitle):
-    return ft.Card(
-        content=ft.Container(
-            content=ft.Column(
-                [
-                    ft.ListTile(
-                        # 如果img_url为空 显示https://picsum.photos/200
-                        # leading=ft.Image(src=img_url, border_radius=100),
-                        title=ft.Text(title),
-                        subtitle=ft.Text(subtitle),
-                    ),
-                    # ft.Row(
-                    #     [ft.TextButton("购票"), ft.TextButton("试听")],
-                    #     alignment=ft.MainAxisAlignment.END,
-                    # ),
-                ]
-            ),
-            expand=True,
-            padding=10,
-        )
-    )
-
-
 def main(page: ft.Page):
     page.window.center()
     page.title = "QQ空间历史内容获取 v1.0 Powered by LibraHp"
@@ -335,6 +357,8 @@ def main(page: ft.Page):
         page.session.clear()
         user_info.content.controls[0].src = "assets/logo.jpg"
         user_info.content.controls[1].value = "LibraHp"
+        global now_login_user
+        now_login_user = None
         content_area.content = create_get_content_page()
         for tab in tabs.controls:
             if tab.data != "GetContent" and tab.data != "Logout" and tab.data != "Github":
@@ -391,6 +415,8 @@ def main(page: ft.Page):
         info = json.loads(info)
         user_info.content.controls[0].src = f'http://q1.qlogo.cn/g?b=qq&nk={uin}&s=100'
         user_info.content.controls[1].value = info[uin][6]
+        global now_login_user
+        now_login_user = User(uin,info[uin][6])
         page.update()
     
     # 路由改变函数
@@ -399,15 +425,15 @@ def main(page: ft.Page):
         if selected_tab == "GetContent":
             content_area.content = create_get_content_page()
         elif selected_tab == "User":
-            content_area.content = ft.Text("说说列表", size=30)
+            content_area.content = PaginatedContainer(user_says, items_per_page=2,title="说说列表")
         elif selected_tab == "Leave":
-            content_area.content = ft.Text("留言列表", size=30)
+            content_area.content = PaginatedContainer(leaves, items_per_page=1,title="留言列表")
         elif selected_tab == "Friends":
-            content_area.content = PaginatedContainer(friends, items_per_page=6,title="好友列表")
+            content_area.content = PaginatedContainer(friends, items_per_page=4,title="好友列表")
         elif selected_tab == "Forward":
-            content_area.content = ft.Text("转发列表", size=30)
+            content_area.content = PaginatedContainer(forward, items_per_page=2,title="转发列表")
         elif selected_tab == "Other":
-            content_area.content = ft.Text("其他列表", size=30)
+            content_area.content = PaginatedContainer(other, items_per_page=2,title="其他列表")
         elif selected_tab == "Pictures":
             content_area.content = ft.Text("图片列表", size=30)
         elif selected_tab == "Logout":
@@ -472,8 +498,7 @@ def main(page: ft.Page):
                         r = requests.get(url, cookies=cookies, allow_redirects=False)
                         target_cookies = requests.utils.dict_from_cookiejar(r.cookies)
                         page.session.set("user_cookies", target_cookies)
-                        page.snack_bar = ft.SnackBar(ft.Text(f"登录成功,欢迎您 {target_cookies.get('uin')}"),duration=2000)
-                        page.snack_bar.open = True
+                        log(f"登录成功,欢迎您，{page.session.get('user_cookies')['uin']}", "success")
                         get_login_user_info()
                         progress_bar, login_text = show_login_content()
                         create_card_list_view(progress_bar, login_text)
@@ -592,64 +617,70 @@ def main(page: ft.Page):
         login_text.value = "获取空间消息列表中..."
         page.update()
         for i in range(int(count / 100) + 1):
-            message = get_message(i * 100, 100).content.decode('utf-8')
-            time.sleep(0.2)
-            html = process_old_html(message)
-            if "li" not in html:
+            try:
+                message = get_message(i * 100, 100).content.decode('utf-8')
+                time.sleep(0.2)
+                html = process_old_html(message)
+                if "li" not in html:
+                    continue
+                soup = BeautifulSoup(html, 'html.parser')
+                for element in soup.find_all('li', class_='f-single f-s-s'):
+                    put_time = None
+                    text = None
+                    img = None
+                    message_type = None
+                    friend = None
+                    comment = Comment(user=None, time=None, content=None)
+                    res_message = Message(user=None, type=None, time=None, content=None, images=None, comment=None)
+                    friend_element = element.find('a', class_='f-name q_namecard')
+                    # 获取好友昵称和QQ
+                    if friend_element is not None:
+                        friend_name = friend_element.get_text()
+                        friend_qq = friend_element.get('link')[9:]
+                        # friend_link = friend_element.get('href')
+                        friend = User(uin=friend_qq, username=friend_name)
+                        comment.user = friend
+                        res_message.user = friend
+                        friends.append(friend)
+                    time_element = element.find('div', class_='info-detail')
+                    text_element = element.find('p', class_='txt-box-title ellipsis-one')
+                    img_element = element.find('a', class_='img-item')
+                    message_type_element = element.find('span', class_='ui-mr10 state')
+                    if message_type_element is not None:
+                        message_type = message_type_element.get_text()
+                        res_message.type = message_type
+                    comment_element = element.find('div', class_='comments-content font-b')
+                    if comment_element is not None:
+                        comment_time_element = comment_element.find('span', class_='ui-mr10 state')
+                        comment.time = parse_time_strings(comment_time_element.get_text())
+                        comment_text = comment_element.get_text()
+                        comment.content = comment_text
+                        res_message.comment = comment
+                    if time_element is not None and text_element is not None:
+                        put_time = time_element.get_text().replace('\xa0', ' ')
+                        put_time = parse_time_strings(put_time)
+                        res_message.time = put_time
+                        text = text_element.get_text().replace('\xa0', ' ')
+                        res_message.content = text
+                        # log(f"{put_time} - {text}")
+                        if img_element is not None:
+                            img = img_element.find('img').get('src')
+                            img = str(img).replace("/m&ek=1&kp=1", "/s&ek=1&kp=1")
+                            img = str(img).replace(r"!/m/", "!/s/")
+                            res_message.images = img
+                        # if text not in [sublist[1] for sublist in texts]:
+                    all_messages.append(res_message)
+                    progress_bar.value = i / int(count / 100)
+                    # 百分比进度，保留两位小数
+                    # progress_bar.value = round(progress_bar.value, 2)
+                    log(f'当前进度：{round(i / int(count / 100), 3) * 100}%')
+                    page.update()
+            except Exception as e:
+                print(e)
+                log(e)
                 continue
-            soup = BeautifulSoup(html, 'html.parser')
-            for element in soup.find_all('li', class_='f-single f-s-s'):
-                put_time = None
-                text = None
-                img = None
-                message_type = None
-                friend = None
-                comment = Comment(user=None, time=None, content=None)
-                res_message = Message(user=None, type=None, time=None, content=None, images=None, comment=None)
-                friend_element = element.find('a', class_='f-name q_namecard')
-                # 获取好友昵称和QQ
-                if friend_element is not None:
-                    friend_name = friend_element.get_text()
-                    friend_qq = friend_element.get('link')[9:]
-                    # friend_link = friend_element.get('href')
-                    friend = User(uin=friend_qq, username=friend_name)
-                    comment.user = friend
-                    res_message.user = friend
-                    friends.append(friend)
-                time_element = element.find('div', class_='info-detail')
-                text_element = element.find('p', class_='txt-box-title ellipsis-one')
-                img_element = element.find('a', class_='img-item')
-                message_type_element = element.find('span', class_='ui-mr10 state')
-                if message_type_element is not None:
-                    message_type = message_type_element.get_text()
-                    res_message.type = message_type
-                comment_element = element.find('div', class_='comments-content font-b')
-                if comment_element is not None:
-                    comment_time_element = comment_element.find('span', class_='ui-mr10 state')
-                    comment.time = parse_time_strings(comment_time_element.get_text())
-                    comment_text = comment_element.get_text()
-                    comment.content = comment_text
-                    res_message.comment = comment
-                if time_element is not None and text_element is not None:
-                    put_time = time_element.get_text().replace('\xa0', ' ')
-                    put_time = parse_time_strings(put_time)
-                    res_message.time = put_time
-                    text = text_element.get_text().replace('\xa0', ' ')
-                    res_message.content = text
-                    # log(f"{put_time} - {text}")
-                    if img_element is not None:
-                        img = img_element.find('img').get('src')
-                        img = str(img).replace("/m&ek=1&kp=1", "/s&ek=1&kp=1")
-                        img = str(img).replace(r"!/m/", "!/s/")
-                        res_message.images = img
-                    # if text not in [sublist[1] for sublist in texts]:
-                all_messages.append(res_message)
-                progress_bar.value = i / int(count / 100)
-                # 百分比进度，保留两位小数
-                # progress_bar.value = round(progress_bar.value, 2)
-                log(f'当前进度：{round(i / int(count / 100), 3) * 100}%')
-                page.update()
         login_text.value = "获取成功！"
+        log("获取成功！", "success")
         progress_bar.visible = False
         clean_content()
         unlock_tabs()
@@ -742,7 +773,7 @@ def main(page: ft.Page):
                 ),
                 ft.Row(
                     controls=[
-                        ft.Text("最早的说说发布在 2022 年 3 月 20 日 12:00", size=20),
+                        ft.Text(f"最早的说说发布在{all_messages[0].time}", size=20),
                         ft.Text("程序完全免费，请勿用于商业用途！", size=20),
                     ],
                     alignment="center",
