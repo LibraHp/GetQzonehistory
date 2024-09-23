@@ -285,7 +285,10 @@ class PaginatedContainer(ft.UserControl):
         # 检查最后一行是否有剩余卡片且未添加
         if current_row.controls:
             rows.controls.append(current_row)
-
+        
+        # 如果传入的数据为空
+        if not current_data:
+            rows.controls.append(ft.Text("没有更多数据了"))
         # 最终将所有卡片的布局添加到 content_area
         self.content_area.controls.append(rows)
 
@@ -339,6 +342,15 @@ class Message:
         return f"{user_info}\n{time_info}\n{content_info}\n{type_info}\n{comment_info}\n{images_info}"
 
 
+def reset_save_content():
+    global all_messages, user_says, forward, leaves, other, friends
+    all_messages = []
+    user_says = []
+    forward = []
+    leaves = []
+    other = []
+    friends = []
+
 
 def main(page: ft.Page):
     page.window.center()
@@ -359,6 +371,7 @@ def main(page: ft.Page):
         user_info.content.controls[1].value = "LibraHp"
         global now_login_user
         now_login_user = None
+        reset_save_content()
         content_area.content = create_get_content_page()
         for tab in tabs.controls:
             if tab.data != "GetContent" and tab.data != "Logout" and tab.data != "Github":
@@ -721,7 +734,7 @@ def main(page: ft.Page):
                     controls=[
                         ft.Card(
                             content=ft.Container(
-                                content=ft.Text("转发共有 " + str(889) + " 条", size=25),
+                                content=ft.Text("转发共有 " + str(forward.__len__()) + " 条", size=25),
                                 padding=20,
                                 alignment=ft.alignment.center,
                             ),
@@ -773,7 +786,7 @@ def main(page: ft.Page):
                 ),
                 ft.Row(
                     controls=[
-                        ft.Text(f"最早的说说发布在{all_messages[0].time}", size=20),
+                        ft.Text(f"最早的说说发布在{all_messages[all_messages.__len__() - 1].time}", size=20),
                         ft.Text("程序完全免费，请勿用于商业用途！", size=20),
                     ],
                     alignment="center",
