@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import threading
 from bs4 import BeautifulSoup
+from collections import Counter
 
 # 初始化所有消息列表
 all_messages = []
@@ -22,7 +23,7 @@ leaves = []
 other = []
 
 now_login_user = None
-
+most_interactive_user = None
 # 全局header
 headers = {
     'authority': 'user.qzone.qq.com',
@@ -101,14 +102,20 @@ def parse_time_strings(time_str):
         return datetime.strptime(time_str, "%Y年%m月%d日 %H:%M")
     elif "月" in time_str:  # 包含“月”的格式
         return datetime.strptime(time_str, "%m月%d日 %H:%M").replace(year=today.year)
-    return None
+    return time_str
 
 
 def clean_content():
-    global all_messages, user_says, forward, leaves, other, friends, now_login_user
+    global all_messages, user_says, forward, leaves, other, friends, now_login_user,most_interactive_user
+
+    user_counter = Counter((message.user.username,message.user.uin) for message in all_messages)
+    most_interactive_user = user_counter.most_common(1)
     # 好友去重
     friends = list({item.uin: item for item in friends}.values())
     all_messages = list({item.content: item for item in all_messages}.values())
+
+
+    print("交互最多的人:", most_interactive_user)
     for message in all_messages:
         try:
             message_type = message.type
@@ -119,11 +126,12 @@ def clean_content():
                 message.user = now_login_user
                 message.content = message.content.replace(now_login_user.username + ' ：', '')
                 user_says.append(message)
-            elif '转发' in message_type:
+            elif '转发' in message.content:
                 forward.append(message)
             else:
                 other.append(message)
                 message.content = message.content.replace(message.user.username + ' ：', '')
+            message.content = message.content.replace(message.user.username, '')
         except Exception as e:
             print(e)
 
@@ -242,7 +250,7 @@ class PaginatedContainer(ft.UserControl):
                         controls=[
                             ft.Text(item.user.username, size=18, weight="bold"),
                             ft.Text(f'{item.time}', size=14),
-                            ft.Text(item.content, size=12,width=300),
+                            ft.Text(item.content, size=16,width=300),
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=4,
@@ -250,7 +258,7 @@ class PaginatedContainer(ft.UserControl):
                 ]
 
                 # 如果存在图片，添加到 controls 中
-                if item.images:
+                if item.images and 'http' in item.images:
                     controls[1].controls.append(ft.Image(src=item.images, fit=ft.ImageFit.COVER,height=300,width=300))
 
                 # 如果存在评论，添加到 controls 中
@@ -310,9 +318,6 @@ class User:
         self.avatar_url = f'http://q1.qlogo.cn/g?b=qq&nk={self.uin}&s=100'  # 使用 self.uin
         self.username = username
         self.link = f'https://user.qzone.qq.com/{self.uin}/'  # 使用 self.uin
-
-    def __str__(self):
-        return f'Uin: {self.uin}, Username: {self.username}, Link: {self.link}, Avatar URL: {self.avatar_url}'
     
 
 class Comment:
@@ -330,16 +335,6 @@ class Message:
         self.content = content
         self.images = images
         self.comment = comment
-
-    def __str__(self):
-        user_info = f"User: {self.user.username if self.user else 'Unknown'}"
-        time_info = f"Time: {self.time}" if self.time else "Time: Not set"
-        content_info = f"Content: {self.content}" if self.content else "Content: Not set"
-        type_info = f"Type: {self.type}" if self.type else "Type: Not set"
-        comment_info = f"Comment: {self.comment.content}" if self.comment and self.comment.content else "Comment: Not set"
-        images_info = f"Images: {self.images}" if self.images else "Images: Not set"
-
-        return f"{user_info}\n{time_info}\n{content_info}\n{type_info}\n{comment_info}\n{images_info}"
 
 
 def reset_save_content():
@@ -470,6 +465,8 @@ def main(page: ft.Page):
             elif content.data == 'login_text':
                 login_text = content
                 content.visible = True
+            elif content.data == 'login_pic':
+                content.visible = True
         return progress_bar, login_text
 
                 
@@ -559,6 +556,7 @@ def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.CENTER,
                     data='not_login'
                 ),
+                ft.Image(src="assets/loading.gif", expand=True, data='login_pic', visible=False),
                 ft.Text("获取空间消息中...", size=24, weight="bold", data='login_text',visible=False),
                 ft.ProgressBar(data='login_progress', visible=False,bar_height=10,border_radius=10),
             ],
@@ -621,6 +619,17 @@ def main(page: ft.Page):
             log(f"获取消息列表数量中... 当前 - Total: {total}")
         return total
     
+
+    def get_hitokoto():
+        url = "https://v1.hitokoto.cn/"
+        response = requests.get(url)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data['hitokoto'], data['from'], data['from_who']
+        else:
+            return None, None, None
+        
     def create_card_list_view(progress_bar, login_text):
 
         # 创建一个空的卡片列表，用于存放所有卡片
@@ -692,112 +701,104 @@ def main(page: ft.Page):
                 print(e)
                 log(e)
                 continue
-        login_text.value = "获取成功！"
+        content_area.content.clean()
         log("获取成功！", "success")
-        progress_bar.visible = False
         clean_content()
         unlock_tabs()
         content_area.content.controls.append(get_message_result())
         page.update()
 
     def get_message_result():
-        return ft.Column(
-            controls=[
-                ft.Row(
-                    controls=[
-                        ft.Card(
-                            content=ft.Container(
-                                content=ft.Text("说说共有 " + str(all_messages.__len__()) + " 条", size=25),
-                                padding=20,
-                                alignment=ft.alignment.center,
-                            ),
-                            elevation=5,
-                            shape=ft.RoundedRectangleBorder(radius=15),
-                            expand=True,
-                        ),
-                        ft.Card(
-                            content=ft.Container(
-                                content=ft.Text("留言共有 " + str(leaves.__len__()) + " 条", size=25),
-                                padding=20,
-                                alignment=ft.alignment.center,
-                            ),
-                            elevation=5,
-                            shape=ft.RoundedRectangleBorder(radius=15),
-                            expand=True,
-                        ),
+        # 用户信息栏
+        user_info = ft.Card(
+            content=ft.Container(
+                content=ft.Row([
+                    ft.CircleAvatar(
+                        foreground_image_src=now_login_user.avatar_url,
+                        content=ft.Text(f"{now_login_user.username}"), 
+                        radius=40
+                    ),  # 圆形头像
+                    ft.Column(
+                        [
+                            ft.Text("你好！", size=16),
+                            ft.Text(f"{now_login_user.username}", size=20, weight=ft.FontWeight.BOLD),
+                        ],
+                        alignment="center",
+                    ),
+                ]),
+                padding=20
+            ),
+            height=300,
+            col=4
+        )
+
+        # 交互信息栏
+        interaction_info = ft.Card(
+            content=ft.Container(
+                content = ft.Column(
+                    [
+                        ft.Text("自空间交互以来：", size=24, weight=ft.FontWeight.BOLD),
+                        ft.Text(f"你发布了{user_says.__len__()}条说说", size=20),
+                        ft.Text(f"有{leaves.__len__()}人给你留言", size=20),
+                        ft.Text(f"有{friends.__len__()}个人与你空间有过交互", size=20),
+                        ft.Text(f"最早的说说发布在{user_says[user_says.__len__() - 1].time}，那个时候的你有这么多烦恼嘛", size=20),
+                        ft.Text(f"和你交互最多的人是", size=20, spans=[ft.TextSpan(f" @{most_interactive_user[0][0][0]} ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("现在的她/他怎么样了呢", ft.TextStyle(size=20))]),
                     ],
-                    alignment="center",
-                    spacing=20,  # 控制两列卡片之间的间距
-                    expand=True,
+                    spacing=10,
+                    alignment=ft.MainAxisAlignment.CENTER,
                 ),
-                ft.Row(
-                    controls=[
-                        ft.Card(
-                            content=ft.Container(
-                                content=ft.Text("转发共有 " + str(forward.__len__()) + " 条", size=25),
-                                padding=20,
-                                alignment=ft.alignment.center,
-                            ),
-                            elevation=5,
-                            shape=ft.RoundedRectangleBorder(radius=15),
-                            expand=True,
+                padding=20,
+            ),
+            height=300,
+            col=8
+        )
+
+        # 发布的第一条说说
+        first_post = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text("你发布的第一条说说是：", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Container(
+                        content=ft.ResponsiveRow(
+                            controls=[
+                                ft.Text(f"{user_says[user_says.__len__() - 1].time}", size=14),
+                                ft.Text(f"{user_says[user_says.__len__() - 1].content}", size=20)
+                            ]
                         ),
-                        ft.Card(
-                            content=ft.Container(
-                                content=ft.Text("图片共有 " + str(889) + " 张", size=25),
-                                padding=20,
-                                alignment=ft.alignment.center,
-                            ),
-                            elevation=5,
-                            shape=ft.RoundedRectangleBorder(radius=15),
-                            expand=True,
-                        ),
-                    ],
-                    alignment="center",
-                    spacing=20,
-                    expand=True,
-                ),
-                ft.Row(
-                    controls=[
-                        ft.Card(
-                            content=ft.Container(
-                                content=ft.Text("评论共有 " + str(889) + " 条", size=25),
-                                padding=20,
-                                alignment=ft.alignment.center,
-                            ),
-                            elevation=5,
-                            shape=ft.RoundedRectangleBorder(radius=15),
-                            expand=True,
-                        ),
-                        ft.Card(
-                            content=ft.Container(
-                                content=ft.Text("好友共有 " + str(friends.__len__()) + " 位", size=25),
-                                padding=20,
-                                alignment=ft.alignment.center,
-                            ),
-                            elevation=5,
-                            shape=ft.RoundedRectangleBorder(radius=15),
-                            expand=True,
-                        ),
-                    ],
-                    alignment="center",
-                    spacing=20,
-                    expand=True,
-                ),
-                ft.Row(
-                    controls=[
-                        ft.Text(f"最早的说说发布在{all_messages[all_messages.__len__() - 1].time}", size=20),
-                        ft.Text("程序完全免费，请勿用于商业用途！", size=20),
-                    ],
-                    alignment="center",
-                )
-            ],
-            alignment="center",
-            horizontal_alignment="center",
-            spacing=20,  # 控制每行之间的间距
+                        padding=10,
+                        border_radius=ft.border_radius.all(5),
+                        bgcolor=ft.colors.GREY_100,
+                        expand=True,
+                    ),
+                ]
+            ),
+            expand=True,
+        )
+        hitokoto, source, author = get_hitokoto()
+        # 一言栏
+        last_message = ft.Container(
+            content=ft.Text(f"一言: {hitokoto}\n出自: {source} - {author}", size=14),
+            padding=10,
+            border_radius=ft.border_radius.all(5),
+            bgcolor=ft.colors.GREY_300,
             expand=True,
         )
 
+        # 布局排列
+        return ft.Column(
+                    [
+                        ft.ResponsiveRow(
+                            controls=[
+                                user_info,
+                                interaction_info,
+                            ]
+                        ),
+                        first_post,
+                        ft.Text(f"一言: {hitokoto}\n出自: {source} - {author}", size=14)
+                    ],
+                    spacing=20,
+                    expand=True,
+                )
 
 
     # 用户信息
