@@ -22,6 +22,9 @@ leaves = []
 # 初始换其他列表
 other = []
 
+# 初始化交互排行榜
+interact_counter = []
+
 now_login_user = None
 most_interactive_user = None
 # 全局header
@@ -109,25 +112,23 @@ def clean_content():
     global all_messages, user_says, forward, leaves, other, friends, now_login_user,most_interactive_user
 
     user_counter = Counter((message.user.username,message.user.uin) for message in all_messages)
-    most_interactive_user = user_counter.most_common(1)
+    most_interactive_user = user_counter.most_common(10)
+    
     # 好友去重
     friends = list({item.uin: item for item in friends}.values())
     all_messages = list({item.content: item for item in all_messages}.values())
 
-
-    print("交互最多的人:", most_interactive_user)
     for message in all_messages:
         try:
-            message_type = message.type
-            if '留言' in message_type:
-                message.content = message.content.replace(now_login_user.username, '')
+            if '留言' in message.content and '留言' in message.type:
+                message.content = message.content.replace(message.user.username, '')
                 leaves.append(message)
+            elif '转发' in message.content:
+                forward.append(message)
             elif now_login_user.username in message.content:
                 message.user = now_login_user
                 message.content = message.content.replace(now_login_user.username + ' ：', '')
                 user_says.append(message)
-            elif '转发' in message.content:
-                forward.append(message)
             else:
                 other.append(message)
                 message.content = message.content.replace(message.user.username + ' ：', '')
@@ -161,7 +162,7 @@ class PaginatedContainer(ft.UserControl):
                 ft.Row(
                     controls=[
                         ft.Text(self.title, size=20,weight="bold"),
-                        ft.ElevatedButton("导出"),
+                        # ft.ElevatedButton("导出"),
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                 ),
@@ -442,8 +443,8 @@ def main(page: ft.Page):
             content_area.content = PaginatedContainer(forward, items_per_page=2,title="转发列表")
         elif selected_tab == "Other":
             content_area.content = PaginatedContainer(other, items_per_page=2,title="其他列表")
-        elif selected_tab == "Pictures":
-            content_area.content = ft.Text("图片列表", size=30)
+        # elif selected_tab == "Pictures":
+        #     content_area.content = ft.Text("图片列表", size=30)
         elif selected_tab == "Logout":
             page.open(dlg_modal)
 
@@ -626,9 +627,9 @@ def main(page: ft.Page):
         
         if response.status_code == 200:
             data = response.json()
-            return data['hitokoto'], data['from'], data['from_who']
+            return data['hitokoto'], data['from']
         else:
-            return None, None, None
+            return '匿名', '匿名'
         
     def create_card_list_view(progress_bar, login_text):
 
@@ -693,6 +694,7 @@ def main(page: ft.Page):
                         # if text not in [sublist[1] for sublist in texts]:
                     all_messages.append(res_message)
                     progress_bar.value = i / int(count / 100)
+                    page.window.progress_bar = i / int(count / 100)
                     # 百分比进度，保留两位小数
                     # progress_bar.value = round(progress_bar.value, 2)
                     log(f'当前进度：{round(i / int(count / 100), 3) * 100}%')
@@ -753,6 +755,8 @@ def main(page: ft.Page):
             col=8
         )
 
+
+        hitokoto, source = get_hitokoto()
         # 发布的第一条说说
         first_post = ft.Container(
             content=ft.Column(
@@ -770,19 +774,40 @@ def main(page: ft.Page):
                         bgcolor=ft.colors.GREY_100,
                         expand=True,
                     ),
-                ]
+                    ft.Text(f"一言: {hitokoto}\n出自: {source}", size=14)
+                ],
             ),
+            col=8,
             expand=True,
         )
-        hitokoto, source, author = get_hitokoto()
-        # 一言栏
-        last_message = ft.Container(
-            content=ft.Text(f"一言: {hitokoto}\n出自: {source} - {author}", size=14),
-            padding=10,
-            border_radius=ft.border_radius.all(5),
-            bgcolor=ft.colors.GREY_300,
-            expand=True,
+        
+        # 好友交互排行榜
+        friend_action_info = ft.Card(
+            content=ft.Container(
+                content = ft.Column(
+                    controls=[
+                        ft.Text("好友交互排行榜", size=18, weight=ft.FontWeight.BOLD),
+                    ],
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+                padding=10,
+                alignment=ft.alignment.center
+            ),
+            col=4,
+            expand=True
         )
+
+        for index, item in enumerate(most_interactive_user):
+            friend_action_info.content.content.controls.append(
+                ft.Row(
+                    controls=[
+                        ft.Text(f"{index + 1}.", size=14),
+                        ft.Image(src=f'http://q1.qlogo.cn/g?b=qq&nk={item[0][1]}&s=100', width=40, height=40, border_radius=100),
+                        ft.Text(f"@{item[0][0]} 交互{item[1]}次", size=14)
+                    ]
+                )
+            )
+            page.update()
 
         # 布局排列
         return ft.Column(
@@ -793,8 +818,13 @@ def main(page: ft.Page):
                                 interaction_info,
                             ]
                         ),
-                        first_post,
-                        ft.Text(f"一言: {hitokoto}\n出自: {source} - {author}", size=14)
+                        ft.ResponsiveRow(
+                            controls=[
+                                first_post,
+                                friend_action_info
+                            ],
+                            expand=True
+                        )
                     ],
                     spacing=20,
                     expand=True,
@@ -825,7 +855,6 @@ def main(page: ft.Page):
             ft.ElevatedButton("好友列表", on_click=change_route, data="Friends", width=200, disabled=True),
             ft.ElevatedButton("转发列表", on_click=change_route, data="Forward", width=200, disabled=True),
             ft.ElevatedButton("其他列表", on_click=change_route, data="Other", width=200, disabled=True),
-            ft.ElevatedButton("图片列表", on_click=change_route, data="Pictures", width=200, disabled=True),
             ft.ElevatedButton("退出当前账号登录", on_click=change_route, data="Logout", width=200),
             ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", data="Github", width=200),
         ],
