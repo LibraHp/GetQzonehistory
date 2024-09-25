@@ -155,32 +155,24 @@ class PaginatedContainer(ft.UserControl):
         self.content_area = ft.Column(spacing=10, expand=True)
         # 页码显示区域
         self.page_info = ft.Text()
+        # 输入框用于输入目标页码
+        self.page_input = ft.TextField(label="跳转到页数", width=120)
 
         # 上一页按钮
         self.prev_button = ft.ElevatedButton("<", on_click=self.previous_page)
         # 下一页按钮
         self.next_button = ft.ElevatedButton(">", on_click=self.next_page)
+        # 跳转按钮
+        self.jump_button = ft.ElevatedButton("跳转", on_click=self.jump_to_page)
 
     def build(self):
         # 导出组件
         export_control = ft.PopupMenuButton(
             items=[
-                ft.PopupMenuItem(
-                    text="导出为JSON",
-                    on_click=self.export_json,
-                ),
-                ft.PopupMenuItem(
-                    text="导出为Excel",
-                    on_click=self.export_excel,
-                ),
-                ft.PopupMenuItem(
-                    text="导出为HTML",
-                    on_click=self.export_html,
-                ),
-                ft.PopupMenuItem(
-                    text="导出为Markdown",
-                    on_click=self.export_markdown,
-                ),
+                ft.PopupMenuItem(text="导出为JSON", on_click=self.export_json),
+                ft.PopupMenuItem(text="导出为Excel", on_click=self.export_excel),
+                ft.PopupMenuItem(text="导出为HTML", on_click=self.export_html),
+                ft.PopupMenuItem(text="导出为Markdown", on_click=self.export_markdown),
             ]
         )
         
@@ -188,7 +180,7 @@ class PaginatedContainer(ft.UserControl):
             [
                 ft.Row(
                     controls=[
-                        ft.Text(self.title, size=20,weight="bold"),
+                        ft.Text(self.title, size=20, weight="bold"),
                         export_control
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN
@@ -207,16 +199,29 @@ class PaginatedContainer(ft.UserControl):
                             self.prev_button,
                             self.page_info,
                             self.next_button,
+                            self.page_input,
+                            self.jump_button,
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
-                        spacing=20,
+                        spacing=10,
                     ),
-                    height=30,
                     alignment=ft.alignment.center,
                 ),
             ],
             expand=True,
         )
+
+    # 新增的跳转到指定页数的逻辑
+    def jump_to_page(self, e):
+        try:
+            target_page = int(self.page_input.value)
+            if 1 <= target_page <= self.total_pages:
+                self.current_page = target_page
+                self.update_page_info()
+            else:
+                print("请输入有效的页码。")
+        except ValueError:
+            print("请输入有效的页码。")
     
     def export_json(self,e):
         print("Exporting JSON...")
@@ -338,7 +343,6 @@ class PaginatedContainer(ft.UserControl):
             rows.controls.append(ft.Text("没有更多数据了"))
         # 最终将所有卡片的布局添加到 content_area
         self.content_area.controls.append(rows)
-
 
 
     def next_page(self, e):
@@ -778,10 +782,10 @@ def main(page: ft.Page):
                 content = ft.Column(
                     [
                         ft.Text("自空间交互以来：", size=24, weight=ft.FontWeight.BOLD),
-                        ft.Text(f"你发布了{user_says.__len__()}条说说", size=20),
-                        ft.Text(f"有{leaves.__len__()}人给你留言", size=20),
-                        ft.Text(f"有{friends.__len__()}个人与你空间有过交互", size=20),
-                        ft.Text(f"最早的说说发布在{user_says[user_says.__len__() - 1].time}，那个时候的你有这么多烦恼嘛", size=20),
+                        ft.Text(f"你发布了", size=20, spans=[ft.TextSpan(f" {user_says.__len__() } ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("条说说", ft.TextStyle(size=20))]),
+                        ft.Text(f"有", size=20, spans=[ft.TextSpan(f" {leaves.__len__() } ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("条留言", ft.TextStyle(size=20))]),
+                        ft.Text(f"有", size=20,spans=[ft.TextSpan(f" {friends.__len__() } ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("个人与你空间有过交互", ft.TextStyle(size=20))]),
+                        ft.Text(f"最早的说说发布在", size=20, spans=[ft.TextSpan(f" {user_says[user_says.__len__() - 1].time} ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("，那个时候的你有这么多烦恼嘛", ft.TextStyle(size=20))]),
                         ft.Text(f"和你交互最多的人是", size=20, spans=[ft.TextSpan(f" @{most_interactive_user[0][0][0]} ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("现在的她/他怎么样了呢", ft.TextStyle(size=20))]),
                     ],
                     spacing=10,
