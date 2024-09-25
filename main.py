@@ -8,6 +8,8 @@ import json
 import threading
 from bs4 import BeautifulSoup
 from collections import Counter
+import os
+import pandas as pd
 
 # 初始化所有消息列表
 all_messages = []
@@ -171,7 +173,7 @@ class PaginatedContainer(ft.UserControl):
             items=[
                 ft.PopupMenuItem(text="导出为JSON", on_click=self.export_json),
                 ft.PopupMenuItem(text="导出为Excel", on_click=self.export_excel),
-                ft.PopupMenuItem(text="导出为HTML", on_click=self.export_html),
+                # ft.PopupMenuItem(text="导出为HTML", on_click=self.export_html),
                 ft.PopupMenuItem(text="导出为Markdown", on_click=self.export_markdown),
             ]
         )
@@ -224,16 +226,93 @@ class PaginatedContainer(ft.UserControl):
             print("请输入有效的页码。")
     
     def export_json(self,e):
-        print("Exporting JSON...")
+        json_data = []
+        for item in self.data:
+            if isinstance(item, User):
+                json_data.append({
+                    "username": item.username,
+                    "uin": item.uin,
+                    "link": item.link,
+                    "avatar_url": item.avatar_url
+                })
+            elif isinstance(item, Message):
+                json_data.append({
+                    "username": item.user.username,
+                    "time": str(item.time),
+                    "content": item.content,
+                    "images": item.images,
+                    "comment": item.comment.content if item.comment else None,
+                    "avatar_url": item.user.avatar_url
+                })
+
+        # 将数据转换为 JSON 字符串
+        json_string = json.dumps(json_data, ensure_ascii=False, indent=4)
+        # 写入到文件
+        with open(f"{now_login_user.uin}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
+            f.write(json_string)
+
 
     def export_excel(self,e):
-        print("Exporting Excel...")
+        export_data = []
+        for item in self.data:
+            if isinstance(item, User):
+                export_data.append({
+                    'Type': 'User',
+                    'Username': item.username,
+                    'QQ': item.uin,
+                    'Avatar URL': item.avatar_url
+                })
+            elif isinstance(item, Message):
+                export_data.append({
+                    'Type': 'Message',
+                    'Username': item.user.username,
+                    'Avatar URL': item.user.avatar_url,
+                    'Time': str(item.time),
+                    'Content': item.content,
+                    'Images': item.images if item.images else '',
+                    'Comment': item.comment.content if item.comment else '',
+                })
+
+        # 将数据转换为 DataFrame
+        df = pd.DataFrame(export_data)
+        # 保存为 Excel 文件
+        df.to_excel(f"{now_login_user.uin}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
+
 
     def export_html(self,e):
         print("Exporting HTML...")
 
     def export_markdown(self,e):
-        print("Exporting Markdown...")
+        # 创建 Markdown 内容的列表
+        markdown_lines = []
+
+        # 添加标题
+        markdown_lines.append(f"# {self.title}\n")
+
+        # 填充数据
+        for item in self.data:
+            if isinstance(item, User):
+                markdown_lines.append(f"## 用户: {item.username}\n")
+                markdown_lines.append(f"**QQ**: {item.uin}\n")
+                markdown_lines.append(f"**头像 URL**: ![{item.uin}]({item.avatar_url}\n")
+                markdown_lines.append("\n")
+            elif isinstance(item, Message):
+                # 处理时间格式
+                time_str = item.time.strftime('%Y-%m-%d %H:%M:%S') if isinstance(item.time, datetime) else item.time
+                markdown_lines.append(f"## 消息来自: {item.user.username}\n")
+                markdown_lines.append(f"**时间**: {time_str}\n")
+                markdown_lines.append(f"**内容**: {item.content}\n")
+                markdown_lines.append(f"**图片**: ![]({item.images})\n")
+                if item.comment:
+                    markdown_lines.append(f"**评论**: {item.comment.content}\n")
+                markdown_lines.append(f"**头像 URL**: ![{item.user.uin}]({item.user.avatar_url})\n")
+                markdown_lines.append("\n")  # 添加空行以分隔消息
+
+        # 生成 Markdown 内容
+        markdown_content = "\n".join(markdown_lines)
+
+        with open(f"{now_login_user.uin}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
 
     def did_mount(self):
         """This method is called when the control is added to the page."""
@@ -405,7 +484,7 @@ def main(page: ft.Page):
 
     def logout():
         page.session.clear()
-        user_info.content.controls[0].src = "assets/logo.jpg"
+        user_info.content.controls[0].src = "https://raw.githubusercontent.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg"
         user_info.content.controls[1].value = "LibraHp"
         global now_login_user
         now_login_user = None
@@ -512,7 +591,10 @@ def main(page: ft.Page):
                 content.visible = True
         return progress_bar, login_text
 
-                
+    def create_user_dir():
+        if not os.path.exists(now_login_user.uin):
+            os.mkdir(now_login_user.uin)
+    
     # 获取内容页面
     def create_get_content_page():
         if page.session.contains_key("user_cookies"):
@@ -553,6 +635,7 @@ def main(page: ft.Page):
                         page.session.set("user_cookies", target_cookies)
                         log(f"登录成功,欢迎您，{page.session.get('user_cookies')['uin']}", "success")
                         get_login_user_info()
+                        create_user_dir()
                         progress_bar, login_text = show_login_content()
                         create_card_list_view(progress_bar, login_text)
                         # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
@@ -599,7 +682,7 @@ def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.CENTER,
                     data='not_login'
                 ),
-                ft.Image(src="assets/loading.gif", expand=True, data='login_pic', visible=False),
+                ft.Image(src="https://raw.githubusercontent.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/loading.gif", expand=True, data='login_pic', visible=False),
                 ft.Text("获取空间消息中...", size=24, weight="bold", data='login_text',visible=False),
                 ft.ProgressBar(data='login_progress', visible=False,bar_height=10,border_radius=10),
             ],
@@ -877,7 +960,7 @@ def main(page: ft.Page):
     user_info = ft.Container(
         content=ft.Column(
             controls=[
-                ft.Image(src="assets/logo.jpg", width=80, height=80, border_radius=100),  # Replace with actual avatar URL
+                ft.Image(src="https://raw.githubusercontent.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg", width=80, height=80, border_radius=100),  # Replace with actual avatar URL
                 ft.Text("LibraHp", size=20, weight="bold")
             ],
             alignment="center",
