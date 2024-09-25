@@ -21,7 +21,6 @@ forward = []
 leaves = []
 # 初始换其他列表
 other = []
-
 # 初始化交互排行榜
 interact_counter = []
 
@@ -118,10 +117,16 @@ def clean_content():
     friends = list({item.uin: item for item in friends}.values())
     all_messages = list({item.content: item for item in all_messages}.values())
 
+    # 按时间排序
+    try:
+        all_messages.sort(key=lambda x: x.time, reverse=True)
+    except Exception as e:
+        print(e)
+
     for message in all_messages:
         try:
-            if '留言' in message.content and '留言' in message.type:
-                message.content = message.content.replace(message.user.username, '')
+            if '留言' in message.content:
+                message.content = message.content.replace(now_login_user.username, '')
                 leaves.append(message)
             elif '转发' in message.content:
                 forward.append(message)
@@ -131,8 +136,8 @@ def clean_content():
                 user_says.append(message)
             else:
                 other.append(message)
-                message.content = message.content.replace(message.user.username + ' ：', '')
-            message.content = message.content.replace(message.user.username, '')
+                message.content = message.content.replace(now_login_user.username + ' ：', '')
+            message.content = message.content.replace(now_login_user.username, '')
         except Exception as e:
             print(e)
 
@@ -157,12 +162,34 @@ class PaginatedContainer(ft.UserControl):
         self.next_button = ft.ElevatedButton(">", on_click=self.next_page)
 
     def build(self):
+        # 导出组件
+        export_control = ft.PopupMenuButton(
+            items=[
+                ft.PopupMenuItem(
+                    text="导出为JSON",
+                    on_click=self.export_json,
+                ),
+                ft.PopupMenuItem(
+                    text="导出为Excel",
+                    on_click=self.export_excel,
+                ),
+                ft.PopupMenuItem(
+                    text="导出为HTML",
+                    on_click=self.export_html,
+                ),
+                ft.PopupMenuItem(
+                    text="导出为Markdown",
+                    on_click=self.export_markdown,
+                ),
+            ]
+        )
+        
         return ft.Column(
             [
                 ft.Row(
                     controls=[
                         ft.Text(self.title, size=20,weight="bold"),
-                        # ft.ElevatedButton("导出"),
+                        export_control
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                 ),
@@ -190,6 +217,18 @@ class PaginatedContainer(ft.UserControl):
             ],
             expand=True,
         )
+    
+    def export_json(self,e):
+        print("Exporting JSON...")
+
+    def export_excel(self,e):
+        print("Exporting Excel...")
+
+    def export_html(self,e):
+        print("Exporting HTML...")
+
+    def export_markdown(self,e):
+        print("Exporting Markdown...")
 
     def did_mount(self):
         """This method is called when the control is added to the page."""
@@ -260,7 +299,7 @@ class PaginatedContainer(ft.UserControl):
 
                 # 如果存在图片，添加到 controls 中
                 if item.images and 'http' in item.images:
-                    controls[1].controls.append(ft.Image(src=item.images, fit=ft.ImageFit.COVER,height=300,width=300))
+                    controls[1].controls.append(ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH,height=300,width=300,border_radius=10))
 
                 # 如果存在评论，添加到 controls 中
                 if item.comment:
@@ -271,7 +310,6 @@ class PaginatedContainer(ft.UserControl):
                         controls=controls,
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=10,
-                        expand=True
                     ),
                     expand=True,
                 )
