@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from collections import Counter
 import os
 import pandas as pd
+import pandas.io.clipboard as cb
 
 # 初始化所有消息列表
 all_messages = []
@@ -28,6 +29,10 @@ interact_counter = []
 
 now_login_user = None
 most_interactive_user = None
+
+save_path = None
+
+
 # 全局header
 headers = {
     'authority': 'user.qzone.qq.com',
@@ -143,8 +148,18 @@ def clean_content():
         except Exception as e:
             print(e)
 
+def save_image(url,name):
+    global save_path
+    print(save_path)
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            with open(f'{save_path}/{name}.jpg', 'wb') as f:
+                f.write(response.content)
+    except Exception as e:
+        print(e)
 
-class PaginatedContainer(ft.UserControl):
+class PaginatedContainer(ft.Column):
     def __init__(self, data, items_per_page=5, title="Title"):
         super().__init__()
         self.data = data
@@ -248,7 +263,7 @@ class PaginatedContainer(ft.UserControl):
         # 将数据转换为 JSON 字符串
         json_string = json.dumps(json_data, ensure_ascii=False, indent=4)
         # 写入到文件
-        with open(f"{now_login_user.uin}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
+        with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
             f.write(json_string)
 
 
@@ -276,7 +291,7 @@ class PaginatedContainer(ft.UserControl):
         # 将数据转换为 DataFrame
         df = pd.DataFrame(export_data)
         # 保存为 Excel 文件
-        df.to_excel(f"{now_login_user.uin}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
+        df.to_excel(f"{save_path}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
 
 
     def export_html(self,e):
@@ -294,7 +309,7 @@ class PaginatedContainer(ft.UserControl):
             if isinstance(item, User):
                 markdown_lines.append(f"## 用户: {item.username}\n")
                 markdown_lines.append(f"**QQ**: {item.uin}\n")
-                markdown_lines.append(f"**头像 URL**: ![{item.uin}]({item.avatar_url}\n")
+                markdown_lines.append(f"**头像 URL**: ![{item.uin}]({item.avatar_url})\n")
                 markdown_lines.append("\n")
             elif isinstance(item, Message):
                 # 处理时间格式
@@ -302,7 +317,8 @@ class PaginatedContainer(ft.UserControl):
                 markdown_lines.append(f"## 消息来自: {item.user.username}\n")
                 markdown_lines.append(f"**时间**: {time_str}\n")
                 markdown_lines.append(f"**内容**: {item.content}\n")
-                markdown_lines.append(f"**图片**: ![]({item.images})\n")
+                if item.images:
+                    markdown_lines.append(f"**图片**: ![]({item.images})\n")
                 if item.comment:
                     markdown_lines.append(f"**评论**: {item.comment.content}\n")
                 markdown_lines.append(f"**头像 URL**: ![{item.user.uin}]({item.user.avatar_url})\n")
@@ -311,7 +327,7 @@ class PaginatedContainer(ft.UserControl):
         # 生成 Markdown 内容
         markdown_content = "\n".join(markdown_lines)
 
-        with open(f"{now_login_user.uin}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
+        with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
             f.write(markdown_content)
 
     def did_mount(self):
@@ -383,7 +399,13 @@ class PaginatedContainer(ft.UserControl):
 
                 # 如果存在图片，添加到 controls 中
                 if item.images and 'http' in item.images:
-                    controls[1].controls.append(ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH,height=300,width=300,border_radius=10))
+                    image_control = ft.PopupMenuButton(
+                        content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH,height=300,width=300,border_radius=10),
+                        items=[
+                            ft.PopupMenuItem(text="复制图片链接",on_click=cb.copy(item.images)),
+                        ],
+                    )
+                    controls[1].controls.append(image_control)
 
                 # 如果存在评论，添加到 controls 中
                 if item.comment:
@@ -564,12 +586,37 @@ def main(page: ft.Page):
             content_area.content = PaginatedContainer(forward, items_per_page=2,title="转发列表")
         elif selected_tab == "Other":
             content_area.content = PaginatedContainer(other, items_per_page=2,title="其他列表")
-        # elif selected_tab == "Pictures":
-        #     content_area.content = ft.Text("图片列表", size=30)
+        elif selected_tab == "Pictures":
+            content_area.content = create_pictures_page()
         elif selected_tab == "Logout":
             page.open(dlg_modal)
 
         page.update()
+
+    def create_pictures_page():
+        pictures_page = ft.GridView(
+            expand=1,
+            runs_count=5,
+            max_extent=300,
+            child_aspect_ratio=1.0,
+            spacing=5,
+            run_spacing=5,
+        )
+
+        for item in all_messages:
+            # 如果存在图片，添加到 controls 中
+            if item.images and 'http' in item.images:
+                image_control = ft.PopupMenuButton(
+                    content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH,height=300,width=300,border_radius=10),
+                    items=[
+                        ft.PopupMenuItem(text="复制图片链接",on_click=cb.copy(item.images)),
+                        # ft.PopupMenuItem(text="保存图片",on_click=save_image(item.images,item.time)),
+                    ],
+                )
+                pictures_page.controls.append(image_control)
+        if len(pictures_page.controls) == 0:
+            pictures_page.controls.append(ft.Text("暂无图片"))
+        return pictures_page
 
     def unlock_tabs():
         for tab in tabs.controls:
@@ -592,8 +639,10 @@ def main(page: ft.Page):
         return progress_bar, login_text
 
     def create_user_dir():
-        if not os.path.exists(now_login_user.uin):
-            os.mkdir(now_login_user.uin)
+        global save_path
+        save_path = f"{now_login_user.uin}"
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
     
     # 获取内容页面
     def create_get_content_page():
@@ -686,7 +735,7 @@ def main(page: ft.Page):
                 ft.Text("获取空间消息中...", size=24, weight="bold", data='login_text',visible=False),
                 ft.ProgressBar(data='login_progress', visible=False,bar_height=10,border_radius=10),
             ],
-            alignment="center",
+            alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment="center",
             expand=True,
         )
@@ -850,7 +899,7 @@ def main(page: ft.Page):
                             ft.Text("你好！", size=16),
                             ft.Text(f"{now_login_user.username}", size=20, weight=ft.FontWeight.BOLD),
                         ],
-                        alignment="center",
+                        alignment=ft.MainAxisAlignment.CENTER,
                     ),
                 ]),
                 padding=20
@@ -963,7 +1012,7 @@ def main(page: ft.Page):
                 ft.Image(src="https://raw.githubusercontent.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg", width=80, height=80, border_radius=100),  # Replace with actual avatar URL
                 ft.Text("LibraHp", size=20, weight="bold")
             ],
-            alignment="center",
+            alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment="center"
         ),
         width=200,
@@ -980,6 +1029,7 @@ def main(page: ft.Page):
             ft.ElevatedButton("好友列表", on_click=change_route, data="Friends", width=200, disabled=True),
             ft.ElevatedButton("转发列表", on_click=change_route, data="Forward", width=200, disabled=True),
             ft.ElevatedButton("其他列表", on_click=change_route, data="Other", width=200, disabled=True),
+            ft.ElevatedButton("照片墙", on_click=change_route, data="Pictures", width=200, disabled=True),
             ft.ElevatedButton("退出当前账号登录", on_click=change_route, data="Logout", width=200),
             ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", data="Github", width=200),
         ],
