@@ -187,6 +187,7 @@ def save_image(url,file_name):
         if response.status_code == 200:
             with open(f'{save_path}/{valid_file_name}.jpg', 'wb') as f:
                 f.write(response.content)
+                log(f"图片保存成功：{save_path}/{valid_file_name}.jpg")
     except Exception as e:
         log(e,"error")
 
@@ -219,11 +220,15 @@ class PaginatedContainer(ft.Column):
             items=[
                 ft.PopupMenuItem(text="导出为JSON", on_click=self.export_json),
                 ft.PopupMenuItem(text="导出为Excel", on_click=self.export_excel),
-                # ft.PopupMenuItem(text="导出为HTML", on_click=self.export_html),
                 ft.PopupMenuItem(text="导出为Markdown", on_click=self.export_markdown),
             ],
             tooltip="导出为",
         )
+        
+        if isinstance(self.data[0], Message):
+            export_control.items.append(
+                ft.PopupMenuItem(text="导出为HTML", on_click=self.export_html)
+            )
         
         return ft.Column(
             [
@@ -328,9 +333,141 @@ class PaginatedContainer(ft.Column):
         log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.xlsx","success")
 
 
-    def export_html(self,e):
-        print("Exporting HTML...")
+    def export_html(self, e):
+        # HTML 头部和样式
+        html_start = '''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Exported Data</title>
+            <style>
+                body {
+                    font-family: 'Arial', sans-serif;
+                    background-color: #f4f4f4;
+                    display: flex;
+                    justify-content: center;
+                    align-items: flex-start;
+                    height: 100vh;
+                    margin: 0;
+                    padding: 20px;
+                }
+                .card-container {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                    width: 50%;
+                }
+                .card {
+                    background-color: #fff;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                    overflow: hidden;
+                }
+                .card-header {
+                    display: flex;
+                    align-items: center;
+                    padding: 15px;
+                }
+                .avatar {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    margin-right: 15px;
+                }
+                .user-info {
+                    display: flex;
+                    flex-direction: column;
+                }
+                .nickname {
+                    font-weight: bold;
+                    color: #333;
+                }
+                .time {
+                    font-size: 12px;
+                    color: #777;
+                }
+                .card-content {
+                    padding: 0 15px 15px;
+                }
+                .text {
+                    color: #555;
+                    margin-bottom: 15px;
+                }
+                .card-image {
+                    width: 100%;
+                    height: auto;
+                }
+                .card-footer {
+                    border-top: 1px solid #eee;
+                    padding: 15px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .comments {
+                    color: #777;
+                    font-size: 14px;
+                }
+                .comments:hover {
+                    text-decoration: underline;
+                    cursor: pointer;
+                }
+                .card:hover {
+                    transform: translateY(-5px);
+                    transition: transform 0.2s ease;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="card-container">
+        '''
+        
+        # HTML 中间部分，动态生成每个数据项的卡片
+        html_middle = ''
+        for item in self.data:
+            # 处理每个数据项的内容，包括用户头像、用户名、发布时间、内容等
+            html_middle += f'''
+                <div class="card">
+                    <div class="card-header">
+                        <img src="{item.user.avatar_url or 'https://via.placeholder.com/50'}" alt="avatar" class="avatar">
+                        <div class="user-info">
+                            <span class="nickname">{item.user.username}</span>
+                            <span class="time">{item.time}</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <p class="text">{item.content}</p>
+                        {f'<img src="{item.images}" alt="post-image" class="card-image">' if item.images and 'http' in item.images else ''}
+                    </div>
+                    <div class="card-footer">
+                        {f'<span class="comments">{item.comment.content}</span>' if item.comment else ''}
+                    </div>
+                </div>
+            '''
 
+        # HTML 尾部
+        html_end = '''
+            </div>
+        </body>
+        </html>
+        '''
+
+        # 生成最终的 HTML 文件
+        html_content = html_start + html_middle + html_end
+
+        # 保存 HTML 文件
+        file_name = f"{now_login_user.uin}_{self.title}_data.html"
+        file_path = f"{save_path}/{file_name}"
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+
+        # 日志记录
+        log(f"导出成功 请查看 {file_name}", "success")
+
+
+    
     def export_markdown(self,e):
         # 创建 Markdown 内容的列表
         markdown_lines = []
