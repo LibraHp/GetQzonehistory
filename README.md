@@ -10,26 +10,13 @@
 - **历史内容查看**：轻松浏览你和好友的历史动态，记录那些美好的瞬间。
 - **用户信息展示**：显示你的QQ头像、昵称等信息，让你在使用时拥有更好的体验。
 - **多种列表选项**：查看说说、留言、好友、转发、图片等多种内容，一应俱全。
+- **获取内容**：提取并查看QQ空间中的所有历史内容，包括发布的说说、图片等。
+- **说说列表**：查看你从最早到最新发布的所有说说内容及时间。
+- **留言列表**：查看好友给你QQ空间留下的所有留言。
+- **好友列表**：获取并查看QQ空间中的好友信息。
+- **转发列表**：查看你曾经转发的所有内容。
+- **互动分析**：基于好友互动的频率，展示与你互动最多的好友排行榜。
 - **开放源代码**：完全免费且开源，欢迎大家参与贡献和讨论！
-
----
-
-## 📦 安装步骤
-
-1. 确保你的环境中已安装 [Python](https://www.python.org/downloads/)。
-2. 克隆这个仓库：
-   ```bash
-   git clone https://github.com/LibraHp/GetQzonehistory.git
-   ```
-3. 安装所需依赖：
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. 运行程序：
-   ```bash
-   python main.py
-   ```
-
 ---
 
 ## 🚀 使用指南
@@ -39,6 +26,26 @@
 3. 在左侧标签页中选择想要查看的内容列表，享受你的QQ空间回忆之旅！
 
 ---
+
+## 📦 参与开发
+
+1. 确保你的环境中已安装 [Python](https://www.python.org/downloads/)和[Flutter](https://flutter.cn/)环境,并且安装了[Flet](https://flet.dev/)。
+2. 克隆这个仓库：
+   ```bash
+   git clone https://github.com/LibraHp/GetQzonehistory.git -b gui
+   ```
+3. 安装所需依赖：
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. 运行程序：
+   ```bash
+   flet run
+   ```
+5. fork仓库
+6. 提交代码
+---
+
 
 ## 🛠️ 技术栈
 
