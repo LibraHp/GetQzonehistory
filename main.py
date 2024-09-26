@@ -27,11 +27,20 @@ other = []
 # 初始化交互排行榜
 interact_counter = []
 
+# 初始化当前登录用户
 now_login_user = None
+
+# 初始化交互排行榜
 most_interactive_user = None
 
+# 初始化保存路径
 save_path = None
 
+# 日志组件引用
+log_info_ref = ft.Ref[ft.Text]()
+
+# 全局page
+global_page = ft.Page
 
 # 全局header
 headers = {
@@ -113,6 +122,28 @@ def parse_time_strings(time_str):
         return datetime.strptime(time_str, "%m月%d日 %H:%M").replace(year=today.year)
     return time_str
 
+def get_big_img_dlg(img_url):
+    return ft.AlertDialog(
+        modal=False,
+        title=ft.Text("查看大图"),
+        content=ft.Column(
+            controls=[
+                ft.Image(src=img_url,height=500,fit=ft.ImageFit.FIT_HEIGHT),
+            ]
+        ),
+    )
+
+def log(message,type="info"):
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    log_info_ref.current.value = f"[{now}] - {message}"
+    if type == "success":
+        log_info_ref.current.color = "green"
+    elif type == "error":
+        log_info_ref.current.color = "red"
+    else:
+        log_info_ref.current.color = "blue"
+    global_page.update()
+
 
 def clean_content():
     global all_messages, user_says, forward, leaves, other, friends, now_login_user,most_interactive_user
@@ -128,7 +159,7 @@ def clean_content():
     try:
         all_messages.sort(key=lambda x: x.time, reverse=True)
     except Exception as e:
-        print(e)
+        log(e,"error")
 
     for message in all_messages:
         try:
@@ -146,18 +177,18 @@ def clean_content():
                 message.content = message.content.replace(now_login_user.username + ' ：', '')
             message.content = message.content.replace(now_login_user.username, '')
         except Exception as e:
-            print(e)
+            log(e,"error")
 
-def save_image(url,name):
+def save_image(url,file_name):
     global save_path
-    print(save_path)
+    valid_file_name = re.sub(r'[<>:"/\\|?*]', '_', file_name)
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            with open(f'{save_path}/{name}.jpg', 'wb') as f:
+            with open(f'{save_path}/{valid_file_name}.jpg', 'wb') as f:
                 f.write(response.content)
     except Exception as e:
-        print(e)
+        log(e,"error")
 
 class PaginatedContainer(ft.Column):
     def __init__(self, data, items_per_page=5, title="Title"):
@@ -190,7 +221,8 @@ class PaginatedContainer(ft.Column):
                 ft.PopupMenuItem(text="导出为Excel", on_click=self.export_excel),
                 # ft.PopupMenuItem(text="导出为HTML", on_click=self.export_html),
                 ft.PopupMenuItem(text="导出为Markdown", on_click=self.export_markdown),
-            ]
+            ],
+            tooltip="导出为",
         )
         
         return ft.Column(
@@ -236,9 +268,9 @@ class PaginatedContainer(ft.Column):
                 self.current_page = target_page
                 self.update_page_info()
             else:
-                print("请输入有效的页码。")
+                log("请输入有效的页码。", "error")
         except ValueError:
-            print("请输入有效的页码。")
+            log("请输入有效的页码。", "error")
     
     def export_json(self,e):
         json_data = []
@@ -265,6 +297,7 @@ class PaginatedContainer(ft.Column):
         # 写入到文件
         with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
             f.write(json_string)
+        log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.json","success")
 
 
     def export_excel(self,e):
@@ -292,6 +325,7 @@ class PaginatedContainer(ft.Column):
         df = pd.DataFrame(export_data)
         # 保存为 Excel 文件
         df.to_excel(f"{save_path}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
+        log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.xlsx","success")
 
 
     def export_html(self,e):
@@ -329,6 +363,7 @@ class PaginatedContainer(ft.Column):
 
         with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
             f.write(markdown_content)
+        log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.md","success")
 
     def did_mount(self):
         """This method is called when the control is added to the page."""
@@ -402,8 +437,11 @@ class PaginatedContainer(ft.Column):
                     image_control = ft.PopupMenuButton(
                         content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH,height=300,width=300,border_radius=10),
                         items=[
-                            ft.PopupMenuItem(text="复制图片链接",on_click=cb.copy(item.images)),
+                            ft.PopupMenuItem(text="复制图片链接", on_click=lambda e, current_item=item: cb.copy(current_item.images)),
+                            ft.PopupMenuItem(text="保存图片", on_click=lambda e, current_item=item: save_image(current_item.images, str(current_item.time))),
+                            ft.PopupMenuItem(text="查看大图", on_click=lambda e, current_item=item: self.page.open(get_big_img_dlg(current_item.images))),
                         ],
+                        tooltip="显示操作",
                     )
                     controls[1].controls.append(image_control)
 
@@ -502,7 +540,8 @@ def main(page: ft.Page):
     # page.window.icon = "https://picsum.photos/200"
     # 字体使用系统默认字体
     page.theme= ft.Theme(font_family="Microsoft YaHei")
-    
+    global global_page
+    global_page = page
 
     def logout():
         page.session.clear()
@@ -607,13 +646,17 @@ def main(page: ft.Page):
             # 如果存在图片，添加到 controls 中
             if item.images and 'http' in item.images:
                 image_control = ft.PopupMenuButton(
-                    content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH,height=300,width=300,border_radius=10),
+                    content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH, height=300, width=300, border_radius=10),
                     items=[
-                        ft.PopupMenuItem(text="复制图片链接",on_click=cb.copy(item.images)),
-                        # ft.PopupMenuItem(text="保存图片",on_click=save_image(item.images,item.time)),
+                        ft.PopupMenuItem(text="复制图片链接", on_click=lambda e, current_item=item: cb.copy(current_item.images)),
+                        ft.PopupMenuItem(text="保存图片", on_click=lambda e, current_item=item: save_image(current_item.images, str(current_item.time))),
+                        ft.PopupMenuItem(text="查看大图", on_click=lambda e, current_item=item: page.open(get_big_img_dlg(current_item.images))),
                     ],
+                    tooltip="显示操作",
                 )
                 pictures_page.controls.append(image_control)
+                page.update()
+
         if len(pictures_page.controls) == 0:
             pictures_page.controls.append(ft.Text("暂无图片"))
         return pictures_page
@@ -874,7 +917,6 @@ def main(page: ft.Page):
                     log(f'当前进度：{round(i / int(count / 100), 3) * 100}%')
                     page.update()
             except Exception as e:
-                print(e)
                 log(e)
                 continue
         content_area.content.clean()
@@ -1031,7 +1073,7 @@ def main(page: ft.Page):
             ft.ElevatedButton("其他列表", on_click=change_route, data="Other", width=200, disabled=True),
             ft.ElevatedButton("照片墙", on_click=change_route, data="Pictures", width=200, disabled=True),
             ft.ElevatedButton("退出当前账号登录", on_click=change_route, data="Logout", width=200),
-            ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", data="Github", width=200),
+            ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", data="Github", width=200)
         ],
         alignment="start",
         spacing=10
@@ -1042,7 +1084,8 @@ def main(page: ft.Page):
         content=ft.Column(
             controls=[user_info, tabs],
             spacing=20,
-            horizontal_alignment="start"
+            horizontal_alignment="start",
+            scroll=ft.ScrollMode.HIDDEN,
         ),
         width=220,
         bgcolor="#ffffff",
@@ -1081,18 +1124,7 @@ def main(page: ft.Page):
         alignment="start"
     )
 
-    def log(message,type="info"):
-        now = time.strftime("%Y-%m-%d %H:%M:%S")
-        log_list.value = f"{now} - {message}"
-        if type == "success":
-            log_list.color = "green"
-        elif type == "error":
-            log_list.color = "red"
-        else:
-            log_list.color = "blue"
-        page.update()
-
-    log_list = ft.Text(size=12, color="blue")
+    log_list = ft.Text(ref=log_info_ref,size=12, color="blue")
     page.add(main_layout)
     page.add(log_list)
     log("开始运行...","success")

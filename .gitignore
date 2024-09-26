@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 
 myenv
+# 导出结果文件夹
+[0-9]*/
