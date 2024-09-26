@@ -225,7 +225,7 @@ class PaginatedContainer(ft.Column):
             tooltip="导出为",
         )
         
-        if isinstance(self.data[0], Message):
+        if self.data and isinstance(self.data[0], Message):
             export_control.items.append(
                 ft.PopupMenuItem(text="导出为HTML", on_click=self.export_html)
             )
