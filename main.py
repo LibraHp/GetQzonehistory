@@ -313,7 +313,7 @@ class PaginatedContainer(ft.Column):
         try:
             with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
                 f.write(json_string)
-            log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.json","success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.json","success")
         except Exception as e:
             log(e,"error")
 
@@ -343,7 +343,7 @@ class PaginatedContainer(ft.Column):
             df = pd.DataFrame(export_data)
             # 保存为 Excel 文件
             df.to_excel(f"{save_path}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
-            log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.xlsx","success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.xlsx","success")
         except Exception as e:
             log(e,"error")
 
@@ -479,7 +479,7 @@ class PaginatedContainer(ft.Column):
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             # 日志记录
-            log(f"导出成功 请查看 {file_name}", "success")
+            log(f"导出成功 请查看 {save_path}/{file_name}", "success")
         except Exception as e:
             log(f"导出失败 {e}", "error")
 
@@ -518,7 +518,7 @@ class PaginatedContainer(ft.Column):
 
             with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
                 f.write(markdown_content)
-            log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.md","success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.md","success")
         except Exception as e:
             log(e,"error")
 
@@ -843,7 +843,6 @@ def main(page: ft.Page):
         return progress_bar, login_text
 
 
-
     def create_user_dir():
         global save_path
         try:
@@ -852,14 +851,18 @@ def main(page: ft.Page):
 
             if system == "Darwin":  # 如果是 macOS 系统
                 # 将文件保存到用户的 ~/Documents/app_data 目录
-                base_path = os.path.join(str(Path.home()), "Documents", "app_data")
+                base_path = os.path.join(str(Path.home()), "Documents", "qzone_export")
             elif system == "Windows":  # 如果是 Windows 系统
                 # 将文件保存到程序的当前运行目录
                 base_path = os.getcwd()
             else:  # 其他系统
                 # 将文件保存到程序的当前运行目录
                 base_path = os.getcwd()
-            
+
+            # 如果 base_path 不存在，则创建它 (确保 app_data 文件夹存在)
+            if not os.path.exists(base_path):
+                os.makedirs(base_path, exist_ok=True)
+
             # 构建用户特定的目录路径
             user_path = os.path.join(base_path, now_login_user.uin)
 
@@ -869,7 +872,7 @@ def main(page: ft.Page):
 
             # 创建用户目录
             if not os.path.exists(user_path):
-                os.makedirs(user_path)
+                os.makedirs(user_path, exist_ok=True)
 
             save_path = user_path  # 更新全局保存路径
             log(f"用户目录创建成功: {save_path}", "success")
@@ -878,6 +881,7 @@ def main(page: ft.Page):
             log(f"文件权限不足: {e}. 请尝试选择不同的目录或以管理员身份运行。", "error")
         except Exception as e:
             log(f"创建用户目录时发生错误: {e}", "error")
+
 
     
     # 获取内容页面
