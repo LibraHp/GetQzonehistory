@@ -11,6 +11,8 @@ from collections import Counter
 import os
 import pandas as pd
 import pandas.io.clipboard as cb
+import platform
+from pathlib import Path
 
 # 初始化所有消息列表
 all_messages = []
@@ -26,19 +28,14 @@ leaves = []
 other = []
 # 初始化交互排行榜
 interact_counter = []
-
 # 初始化当前登录用户
 now_login_user = None
-
 # 初始化交互排行榜
 most_interactive_user = None
-
 # 初始化保存路径
 save_path = None
-
 # 日志组件引用
 log_info_ref = ft.Ref[ft.Text]()
-
 # 全局page
 global_page = ft.Page
 
@@ -146,38 +143,43 @@ def log(message,type="info"):
 
 
 def clean_content():
-    global all_messages, user_says, forward, leaves, other, friends, now_login_user,most_interactive_user
-
-    user_counter = Counter((message.user.username,message.user.uin) for message in all_messages)
-    most_interactive_user = user_counter.most_common(10)
-    
-    # 好友去重
-    friends = list({item.uin: item for item in friends}.values())
-    all_messages = list({item.content: item for item in all_messages}.values())
-
-    # 按时间排序
+    global all_messages, user_says, forward, leaves, other, friends, now_login_user, most_interactive_user
     try:
-        all_messages.sort(key=lambda x: x.time, reverse=True)
-    except Exception as e:
-        log(e,"error")
-
-    for message in all_messages:
-        try:
-            if '留言' in message.content:
-                message.content = message.content.replace(now_login_user.username, '')
+        # 统计互动次数最多的用户
+        user_counter = Counter((message.user.username, message.user.uin) for message in all_messages if message.user)
+        most_interactive_user = user_counter.most_common(10)
+        # 好友去重，使用字典确保唯一性
+        friends = list({friend.uin: friend for friend in friends if friend}.values())
+        # 消息去重，使用消息内容作为键
+        all_messages = list({message.content: message for message in all_messages if message.content}.values())
+        # 按时间排序，确保消息有时间字段
+        all_messages.sort(key=lambda x: x.time if x.time else '', reverse=True)
+        # 清理并分类消息
+        for message in all_messages:
+            if not message or not message.content:
+                continue  # 忽略无效消息
+            content = message.content
+            # 处理留言
+            if '留言' in content:
+                content = content.replace(now_login_user.username, '')
                 leaves.append(message)
-            elif '转发' in message.content:
+            # 处理转发
+            elif '转发' in content:
                 forward.append(message)
-            elif now_login_user.username in message.content:
+            # 处理当前用户发送的消息
+            elif now_login_user.username in content:
                 message.user = now_login_user
-                message.content = message.content.replace(now_login_user.username + ' ：', '')
+                content = content.replace(now_login_user.username + ' ：', '')
                 user_says.append(message)
+            # 处理其他类型的消息
             else:
                 other.append(message)
-                message.content = message.content.replace(now_login_user.username + ' ：', '')
-            message.content = message.content.replace(now_login_user.username, '')
-        except Exception as e:
-            log(e,"error")
+                content = content.replace(now_login_user.username + ' ：', '')
+            # 移除当前登录用户的名字
+            message.content = content.replace(now_login_user.username, '')
+    except Exception as e:
+        log(f"清理内容时发生错误: {e}", "error")
+
 
 def save_image(url,file_name):
     global save_path
@@ -691,8 +693,10 @@ def main(page: ft.Page):
     page.title = "QQ空间历史内容获取 v1.0 Powered by LibraHp"
     page.horizontal_alignment = "start"
     page.vertical_alignment = "center"
-    page.window.resizable = False
+    # page.window.resizable = False
     page.padding = ft.padding.only(20,20,20,5)
+    page.window.min_height = 700
+    page.window.min_width = 1200
     # page.bgcolor = "#f0f0f0"
     # page.window.icon = "https://picsum.photos/200"
     # 字体使用系统默认字体
@@ -749,7 +753,7 @@ def main(page: ft.Page):
             return base64_image
 
         except Exception as e:
-            log(e, "error")
+            log("二维码获取问题：" + e, "error")
             return None
         
     def get_login_user_info():
@@ -838,11 +842,43 @@ def main(page: ft.Page):
                 content.visible = True
         return progress_bar, login_text
 
+
+
     def create_user_dir():
         global save_path
-        save_path = f"{now_login_user.uin}"
-        if not os.path.exists(save_path):
-            os.mkdir(save_path)
+        try:
+            # 获取当前系统
+            system = platform.system()
+
+            if system == "Darwin":  # 如果是 macOS 系统
+                # 将文件保存到用户的 ~/Documents/app_data 目录
+                base_path = os.path.join(str(Path.home()), "Documents", "app_data")
+            elif system == "Windows":  # 如果是 Windows 系统
+                # 将文件保存到程序的当前运行目录
+                base_path = os.getcwd()
+            else:  # 其他系统
+                # 将文件保存到程序的当前运行目录
+                base_path = os.getcwd()
+            
+            # 构建用户特定的目录路径
+            user_path = os.path.join(base_path, now_login_user.uin)
+
+            # 检查是否有写权限
+            if not os.access(base_path, os.W_OK):
+                raise PermissionError(f"无法写入路径: {base_path}。请检查权限或以管理员身份运行。")
+
+            # 创建用户目录
+            if not os.path.exists(user_path):
+                os.makedirs(user_path)
+
+            save_path = user_path  # 更新全局保存路径
+            log(f"用户目录创建成功: {save_path}", "success")
+
+        except PermissionError as e:
+            log(f"文件权限不足: {e}. 请尝试选择不同的目录或以管理员身份运行。", "error")
+        except Exception as e:
+            log(f"创建用户目录时发生错误: {e}", "error")
+
     
     # 获取内容页面
     def create_get_content_page():
@@ -889,9 +925,9 @@ def main(page: ft.Page):
                         create_card_list_view(progress_bar, login_text)
                         # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
                     except Exception as e:
-                        log("登录失败 请检查网络环境是否正常","error")
+                        log("登录过程问题：" + e,"error")
             except Exception as e:
-                log(e,"error")
+                log("二维码状态问题：" + e,"error")
 
             page.update()
 
@@ -979,6 +1015,8 @@ def main(page: ft.Page):
     
     def get_message_count():
         try:
+            if page.client_storage.contains_key(f"{now_login_user.uin}_message_count"):
+                return page.client_storage.get(f"{now_login_user.uin}_message_count")
             # 初始的总量范围
             lower_bound = 0
             upper_bound = 10000000  # 假设最大总量为1000000
@@ -1010,82 +1048,106 @@ def main(page: ft.Page):
             return '匿名', '匿名'
         
     def create_card_list_view(progress_bar, login_text):
+        try:
+            # 创建一个空的卡片列表，用于存放所有卡片
+            login_text.value = "获取空间消息数量中..."
+            page.update()
+            count = get_message_count()
+            page.client_storage.set(f"{now_login_user.uin}_message_count", count)
+            login_text.value = "获取空间消息列表中..."
+            page.update()
 
-        # 创建一个空的卡片列表，用于存放所有卡片
-        login_text.value = "获取空间消息数量中..."
-        page.update()
-        count = get_message_count()
-        login_text.value = "获取空间消息列表中..."
-        page.update()
-        for i in range(int(count / 100) + 1):
-            try:
-                message = get_message(i * 100, 100).content.decode('utf-8')
-                time.sleep(0.2)
-                html = process_old_html(message)
-                if "li" not in html:
+            for i in range(int(count / 100) + 1):
+                try:
+                    # 获取消息并解码
+                    message_content = get_message(i * 100, 100).content
+                    message = message_content.decode('utf-8') if message_content else None
+
+                    # 确保消息内容存在
+                    if not message:
+                        continue
+
+                    # 处理消息
+                    html = process_old_html(message)
+
+                    # 确保 HTML 中包含有效信息
+                    if "li" not in html:
+                        continue
+
+                    soup = BeautifulSoup(html, 'html.parser')
+
+                    # 遍历所有的列表项
+                    for element in soup.find_all('li', class_='f-single f-s-s'):
+                        # 初始化
+                        res_message = Message(user=None, type=None, time=None, content=None, images=None, comment=None)
+                        comment = Comment(user=None, time=None, content=None)
+
+                        # 处理好友信息
+                        friend_element = element.find('a', class_='f-name q_namecard')
+                        if friend_element:
+                            friend_name = friend_element.get_text()
+                            friend_qq = friend_element.get('link', '')[9:]  # 使用默认空值
+                            friend = User(uin=friend_qq, username=friend_name)
+                            comment.user = friend
+                            res_message.user = friend
+                            friends.append(friend)
+
+                        # 处理时间、文本、图片等信息
+                        time_element = element.find('div', class_='info-detail')
+                        text_element = element.find('p', class_='txt-box-title ellipsis-one')
+                        img_element = element.find('a', class_='img-item')
+                        message_type_element = element.find('span', class_='ui-mr10 state')
+                        comment_element = element.find('div', class_='comments-content font-b')
+
+                        # 消息类型
+                        if message_type_element:
+                            res_message.type = message_type_element.get_text()
+
+                        # 评论
+                        if comment_element:
+                            comment_time_element = comment_element.find('span', class_='ui-mr10 state')
+                            comment.time = parse_time_strings(comment_time_element.get_text()) if comment_time_element else None
+                            comment.content = comment_element.get_text()
+                            res_message.comment = comment
+
+                        # 发送时间和内容
+                        if time_element and text_element:
+                            put_time = time_element.get_text().replace('\xa0', ' ')
+                            res_message.time = parse_time_strings(put_time)
+                            res_message.content = text_element.get_text().replace('\xa0', ' ')
+
+                        # 图片处理
+                        if img_element:
+                            img_src = img_element.find('img').get('src')
+                            if img_src:
+                                img_src = img_src.replace("/m&ek=1&kp=1", "/s&ek=1&kp=1").replace(r"!/m/", "!/s/")
+                                res_message.images = img_src
+
+                        # 添加消息到列表
+                        all_messages.append(res_message)
+
+                        # 更新进度条
+                        progress_value = i / int(count / 100)
+                        progress_bar.value = progress_value
+                        page.window.progress_bar = progress_value
+                        log(f'当前进度：{round(progress_value, 3) * 100}%')
+                        page.update()
+
+                except Exception as e:
+                    log(f"处理消息时发生错误: {e}", "error")
                     continue
-                soup = BeautifulSoup(html, 'html.parser')
-                for element in soup.find_all('li', class_='f-single f-s-s'):
-                    put_time = None
-                    text = None
-                    img = None
-                    message_type = None
-                    friend = None
-                    comment = Comment(user=None, time=None, content=None)
-                    res_message = Message(user=None, type=None, time=None, content=None, images=None, comment=None)
-                    friend_element = element.find('a', class_='f-name q_namecard')
-                    # 获取好友昵称和QQ
-                    if friend_element is not None:
-                        friend_name = friend_element.get_text()
-                        friend_qq = friend_element.get('link')[9:]
-                        # friend_link = friend_element.get('href')
-                        friend = User(uin=friend_qq, username=friend_name)
-                        comment.user = friend
-                        res_message.user = friend
-                        friends.append(friend)
-                    time_element = element.find('div', class_='info-detail')
-                    text_element = element.find('p', class_='txt-box-title ellipsis-one')
-                    img_element = element.find('a', class_='img-item')
-                    message_type_element = element.find('span', class_='ui-mr10 state')
-                    if message_type_element is not None:
-                        message_type = message_type_element.get_text()
-                        res_message.type = message_type
-                    comment_element = element.find('div', class_='comments-content font-b')
-                    if comment_element is not None:
-                        comment_time_element = comment_element.find('span', class_='ui-mr10 state')
-                        comment.time = parse_time_strings(comment_time_element.get_text())
-                        comment_text = comment_element.get_text()
-                        comment.content = comment_text
-                        res_message.comment = comment
-                    if time_element is not None and text_element is not None:
-                        put_time = time_element.get_text().replace('\xa0', ' ')
-                        put_time = parse_time_strings(put_time)
-                        res_message.time = put_time
-                        text = text_element.get_text().replace('\xa0', ' ')
-                        res_message.content = text
-                        # log(f"{put_time} - {text}")
-                        if img_element is not None:
-                            img = img_element.find('img').get('src')
-                            img = str(img).replace("/m&ek=1&kp=1", "/s&ek=1&kp=1")
-                            img = str(img).replace(r"!/m/", "!/s/")
-                            res_message.images = img
-                        # if text not in [sublist[1] for sublist in texts]:
-                    all_messages.append(res_message)
-                    progress_bar.value = i / int(count / 100)
-                    page.window.progress_bar = i / int(count / 100)
-                    # 百分比进度，保留两位小数
-                    # progress_bar.value = round(progress_bar.value, 2)
-                    log(f'当前进度：{round(i / int(count / 100), 3) * 100}%')
-                    page.update()
-            except Exception as e:
-                log(e)
-                continue
-        content_area.content.clean()
-        log("获取成功！", "success")
-        clean_content()
-        unlock_tabs()
-        content_area.content.controls.append(get_message_result())
-        page.update()
+
+            # 完成消息获取
+            content_area.content.clean()
+            log("获取成功！", "success")
+            clean_content()
+            unlock_tabs()
+            content_area.content.controls.append(get_message_result())
+            page.update()
+
+        except Exception as e:
+            log(f"获取消息时发生错误: {e}", "error")
+
 
     def get_message_result():
         # 用户信息栏
@@ -1226,15 +1288,15 @@ def main(page: ft.Page):
     # 左侧标签页
     tabs = ft.Column(
         controls=[
-            ft.ElevatedButton("获取内容", on_click=change_route, data="GetContent", width=200),
-            ft.ElevatedButton("说说列表", on_click=change_route, data="User", width=200, disabled=True),
-            ft.ElevatedButton("留言列表", on_click=change_route, data="Leave", width=200, disabled=True),
-            ft.ElevatedButton("好友列表", on_click=change_route, data="Friends", width=200, disabled=True),
-            ft.ElevatedButton("转发列表", on_click=change_route, data="Forward", width=200, disabled=True),
-            ft.ElevatedButton("其他列表", on_click=change_route, data="Other", width=200, disabled=True),
-            ft.ElevatedButton("照片墙", on_click=change_route, data="Pictures", width=200, disabled=True),
-            ft.ElevatedButton("退出当前账号登录", on_click=change_route, data="Logout", width=200),
-            ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", data="Github", width=200)
+            ft.ElevatedButton("获取内容", on_click=change_route, data="GetContent", width=page.width),
+            ft.ElevatedButton("说说列表", on_click=change_route, data="User", width=page.width, disabled=True),
+            ft.ElevatedButton("留言列表", on_click=change_route, data="Leave", width=page.width, disabled=True),
+            ft.ElevatedButton("好友列表", on_click=change_route, data="Friends", width=page.width, disabled=True),
+            ft.ElevatedButton("转发列表", on_click=change_route, data="Forward", width=page.width, disabled=True),
+            ft.ElevatedButton("其他列表", on_click=change_route, data="Other", width=page.width, disabled=True),
+            ft.ElevatedButton("照片墙", on_click=change_route, data="Pictures", width=page.width, disabled=True),
+            ft.ElevatedButton("退出当前账号登录", on_click=change_route, data="Logout", width=page.width),
+            ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", data="Github", width=page.width)
         ],
         alignment="center",
         spacing=10
