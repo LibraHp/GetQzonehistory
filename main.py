@@ -978,21 +978,25 @@ def main(page: ft.Page):
         return response
     
     def get_message_count():
-        # 初始的总量范围
-        lower_bound = 0
-        upper_bound = 10000000  # 假设最大总量为1000000
-        total = upper_bound // 2  # 初始的总量为上下界的中间值
-        while lower_bound <= upper_bound:
-            response = get_message(total, 100)
-            if "li" in response.text:
-                # 请求成功，总量应该在当前总量的右侧
-                lower_bound = total + 1
-            else:
-                # 请求失败，总量应该在当前总量的左侧
-                upper_bound = total - 1
-            total = (lower_bound + upper_bound) // 2  # 更新总量为新的中间值
-            log(f"获取消息列表数量中... 当前 - Total: {total}")
-        return total
+        try:
+            # 初始的总量范围
+            lower_bound = 0
+            upper_bound = 10000000  # 假设最大总量为1000000
+            total = upper_bound // 2  # 初始的总量为上下界的中间值
+            while lower_bound <= upper_bound:
+                response = get_message(total, 100)
+                if "li" in response.text:
+                    # 请求成功，总量应该在当前总量的右侧
+                    lower_bound = total + 1
+                else:
+                    # 请求失败，总量应该在当前总量的左侧
+                    upper_bound = total - 1
+                total = (lower_bound + upper_bound) // 2  # 更新总量为新的中间值
+                log(f"获取消息列表数量中... 当前 - Total: {total}")
+            return total
+        except Exception as e:
+            log(e, "error")
+            return 0
     
 
     def get_hitokoto():
