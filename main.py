@@ -191,6 +191,7 @@ def save_image(url,file_name):
     except Exception as e:
         log(e,"error")
 
+
 class PaginatedContainer(ft.Column):
     def __init__(self, data, items_per_page=5, title="Title"):
         super().__init__()
@@ -217,6 +218,7 @@ class PaginatedContainer(ft.Column):
     def build(self):
         # 导出组件
         export_control = ft.PopupMenuButton(
+            icon=ft.icons.SEND_AND_ARCHIVE,
             items=[
                 ft.PopupMenuItem(text="导出为JSON", on_click=self.export_json),
                 ft.PopupMenuItem(text="导出为Excel", on_click=self.export_excel),
@@ -235,7 +237,13 @@ class PaginatedContainer(ft.Column):
                 ft.Row(
                     controls=[
                         ft.Text(self.title, size=20, weight="bold"),
-                        export_control
+                        ft.Row(
+                            controls=[
+                                ft.Text("导出为"),
+                                export_control
+                            ]
+                        )
+                        
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                 ),
@@ -300,9 +308,12 @@ class PaginatedContainer(ft.Column):
         # 将数据转换为 JSON 字符串
         json_string = json.dumps(json_data, ensure_ascii=False, indent=4)
         # 写入到文件
-        with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
-            f.write(json_string)
-        log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.json","success")
+        try:
+            with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
+                f.write(json_string)
+            log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.json","success")
+        except Exception as e:
+            log(e,"error")
 
 
     def export_excel(self,e):
@@ -325,12 +336,14 @@ class PaginatedContainer(ft.Column):
                     'Images': item.images if item.images else '',
                     'Comment': item.comment.content if item.comment else '',
                 })
-
-        # 将数据转换为 DataFrame
-        df = pd.DataFrame(export_data)
-        # 保存为 Excel 文件
-        df.to_excel(f"{save_path}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
-        log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.xlsx","success")
+        try:
+            # 将数据转换为 DataFrame
+            df = pd.DataFrame(export_data)
+            # 保存为 Excel 文件
+            df.to_excel(f"{save_path}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
+            log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.xlsx","success")
+        except Exception as e:
+            log(e,"error")
 
 
     def export_html(self, e):
@@ -460,11 +473,13 @@ class PaginatedContainer(ft.Column):
         # 保存 HTML 文件
         file_name = f"{now_login_user.uin}_{self.title}_data.html"
         file_path = f"{save_path}/{file_name}"
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-
-        # 日志记录
-        log(f"导出成功 请查看 {file_name}", "success")
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            # 日志记录
+            log(f"导出成功 请查看 {file_name}", "success")
+        except Exception as e:
+            log(f"导出失败 {e}", "error")
 
 
     
@@ -497,14 +512,19 @@ class PaginatedContainer(ft.Column):
 
         # 生成 Markdown 内容
         markdown_content = "\n".join(markdown_lines)
+        try:
 
-        with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
-            f.write(markdown_content)
-        log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.md","success")
+            with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
+                f.write(markdown_content)
+            log(f"导出成功 请查看 {now_login_user.uin}_{self.title}_data.md","success")
+        except Exception as e:
+            log(e,"error")
+
 
     def did_mount(self):
         """This method is called when the control is added to the page."""
         self.update_page_info()
+
 
     def update_page_info(self):
         # 更新当前页的内容
@@ -673,7 +693,7 @@ def main(page: ft.Page):
     page.vertical_alignment = "center"
     page.window.resizable = False
     page.padding = ft.padding.only(20,20,20,5)
-    page.bgcolor = "#f0f0f0"
+    # page.bgcolor = "#f0f0f0"
     # page.window.icon = "https://picsum.photos/200"
     # 字体使用系统默认字体
     page.theme= ft.Theme(font_family="Microsoft YaHei")
@@ -869,7 +889,7 @@ def main(page: ft.Page):
                         create_card_list_view(progress_bar, login_text)
                         # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
                     except Exception as e:
-                        log(e,"error")
+                        log("登录失败 请检查网络环境是否正常","error")
             except Exception as e:
                 log(e,"error")
 
@@ -977,7 +997,7 @@ def main(page: ft.Page):
 
     def get_hitokoto():
         url = "https://v1.hitokoto.cn/"
-        response = requests.get(url)
+        response = requests.get(url,headers=headers)
         
         if response.status_code == 200:
             data = response.json()
@@ -1124,7 +1144,7 @@ def main(page: ft.Page):
                         ),
                         padding=10,
                         border_radius=ft.border_radius.all(5),
-                        bgcolor=ft.colors.GREY_100,
+                        # bgcolor=ft.colors.GREY_100,
                         expand=True,
                     ),
                     ft.Text(f"一言: {hitokoto}\n出自: {source}", size=14)
@@ -1212,7 +1232,7 @@ def main(page: ft.Page):
             ft.ElevatedButton("退出当前账号登录", on_click=change_route, data="Logout", width=200),
             ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", data="Github", width=200)
         ],
-        alignment="start",
+        alignment="center",
         spacing=10
     )
 
@@ -1221,11 +1241,12 @@ def main(page: ft.Page):
         content=ft.Column(
             controls=[user_info, tabs],
             spacing=20,
-            horizontal_alignment="start",
+            horizontal_alignment="center",
             scroll=ft.ScrollMode.HIDDEN,
         ),
-        width=220,
-        bgcolor="#ffffff",
+        alignment=ft.alignment.center,
+        col=2,
+        # bgcolor="#ffffff",
         border_radius=10,
         padding=10
     )
@@ -1248,14 +1269,15 @@ def main(page: ft.Page):
             expand=True,
             scroll=ft.ScrollMode.HIDDEN
         ),
-        bgcolor="#ffffff",
+        # bgcolor="#ffffff",
         expand=True,
         padding=20,
-        border_radius=10
+        border_radius=10,
+        col=10
     )
 
     # 主布局
-    main_layout = ft.Row(
+    main_layout = ft.ResponsiveRow(
         controls=[left_panel, content_area],
         expand=True,
         alignment="start"
