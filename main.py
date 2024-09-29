@@ -13,7 +13,8 @@ import pandas as pd
 import pandas.io.clipboard as cb
 import platform
 from pathlib import Path
-
+# 程序版本
+version = "1.0.2"
 # 初始化所有消息列表
 all_messages = []
 # 初始化说说列表
@@ -690,7 +691,7 @@ def reset_save_content():
 
 def main(page: ft.Page):
     page.window.center()
-    page.title = "QQ空间历史内容获取 v1.0 Powered by LibraHp"
+    page.title = f"QQ空间历史内容获取 v{version} Powered by LibraHp"
     page.horizontal_alignment = "start"
     page.vertical_alignment = "center"
     # page.window.resizable = False
