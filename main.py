@@ -13,6 +13,7 @@ import pandas as pd
 import pandas.io.clipboard as cb
 import platform
 from pathlib import Path
+
 # 程序版本
 version = "1.0.2"
 # 初始化所有消息列表
@@ -1188,7 +1189,7 @@ def main(page: ft.Page):
                         ft.Text(f"有", size=20, spans=[ft.TextSpan(f" {leaves.__len__() } ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("条留言", ft.TextStyle(size=20))]),
                         ft.Text(f"有", size=20,spans=[ft.TextSpan(f" {friends.__len__() } ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("个人与你空间有过交互", ft.TextStyle(size=20))]),
                         ft.Text(f"最早的说说发布在", size=20, spans=[ft.TextSpan(f" {user_says[user_says.__len__() - 1].time if user_says.__len__() > 0 else '无'} ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("，那个时候的你有这么多烦恼嘛", ft.TextStyle(size=20))]),
-                        ft.Text(f"和你交互最多的人是", size=20, spans=[ft.TextSpan(f" @{most_interactive_user[0][0][0]} ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("现在的她/他怎么样了呢", ft.TextStyle(size=20))]),
+                        ft.Text(f"和你交互最多的人是", size=20, spans=[ft.TextSpan(f" @{most_interactive_user[0][0][0] if most_interactive_user.__len__() > 0 else '无'} ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("现在的她/他怎么样了呢", ft.TextStyle(size=20))]),
                     ],
                     spacing=10,
                     alignment=ft.MainAxisAlignment.CENTER,
@@ -1209,8 +1210,8 @@ def main(page: ft.Page):
                     ft.Container(
                         content=ft.ResponsiveRow(
                             controls=[
-                                ft.Text(f"{user_says[user_says.__len__() - 1].time}", size=14),
-                                ft.Text(f"{user_says[user_says.__len__() - 1].content}", size=20)
+                                ft.Text(f"{user_says[user_says.__len__() - 1].time if user_says.__len__() > 0 else '无'}", size=14),
+                                ft.Text(f"{user_says[user_says.__len__() - 1].content if user_says.__len__() > 0 else '无'}", size=20)
                             ]
                         ),
                         padding=10,
