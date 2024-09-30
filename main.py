@@ -13,6 +13,7 @@ import pandas as pd
 import pandas.io.clipboard as cb
 import platform
 from pathlib import Path
+import traceback
 
 # 程序版本
 version = "1.0.2"
@@ -113,13 +114,17 @@ def process_old_html(message):
 
 def parse_time_strings(time_str):
     today = datetime.today().date()  # 获取今天的日期
-    if len(time_str) == 5:  # 格式为 HH:MM
-        return datetime.combine(today, datetime.strptime(time_str, "%H:%M").time())
-    elif "年" in time_str:  # 包含“年”的格式
-        return datetime.strptime(time_str, "%Y年%m月%d日 %H:%M")
-    elif "月" in time_str:  # 包含“月”的格式
-        return datetime.strptime(time_str, "%m月%d日 %H:%M").replace(year=today.year)
-    return time_str
+    try:
+        if len(time_str) == 5:  # 格式为 HH:MM
+            return datetime.combine(today, datetime.strptime(time_str, "%H:%M").time())
+        elif "年" in time_str:  # 包含“年”的格式
+            return datetime.strptime(time_str, "%Y年%m月%d日 %H:%M")
+        elif "月" in time_str:  # 包含“月”的格式
+            return datetime.strptime(time_str, "%m月%d日 %H:%M").replace(year=today.year)
+        else:
+            return datetime.now()  # 不符合任何格式时返回最早的时间
+    except ValueError:
+        return datetime.now()  # 如果解析失败，返回最早的时间
 
 def get_big_img_dlg(img_url):
     return ft.AlertDialog(
@@ -155,7 +160,7 @@ def clean_content():
         # 消息去重，使用消息内容作为键
         all_messages = list({message.content: message for message in all_messages if message.content}.values())
         # 按时间排序，确保消息有时间字段
-        all_messages.sort(key=lambda x: x.time if x.time else '', reverse=True)
+        all_messages.sort(key=lambda x: x.time if x.time else datetime.min, reverse=True)
         # 清理并分类消息
         for message in all_messages:
             if not message or not message.content:
@@ -180,6 +185,7 @@ def clean_content():
             # 移除当前登录用户的名字
             message.content = content.replace(now_login_user.username, '')
     except Exception as e:
+        print(traceback.format_exc())
         log(f"清理内容时发生错误: {e}", "error")
 
 
@@ -1136,7 +1142,7 @@ def main(page: ft.Page):
                         progress_value = i / int(count / 100)
                         progress_bar.value = progress_value
                         page.window.progress_bar = progress_value
-                        log(f'当前进度：{round(progress_value, 3) * 100}%')
+                        log(f'当前进度：{round(progress_value, 3) * 100}%  第 {i} 页/共 {count/100} 页')
                         page.update()
 
                 except Exception as e:
