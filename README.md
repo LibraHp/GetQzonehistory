@@ -5,6 +5,7 @@
 ---
 当前最新版本为 **1.0.2** 最后更新时间为 **2024年9月30日 20:10**
 
+点击此处可跳转到 [Releases](https://github.com/LibraHp/GetQzonehistory/releases/tag/gui-v1.0.2) 页面进行更新
 ## 1.0.2 版本修复内容：
 - 1.修复了Mac用户无法创建导出文件夹的问题
 - 2.优化代码逻辑，出错概率大大降低
