@@ -528,6 +528,7 @@ class PaginatedContainer(ft.Column):
                 f.write(markdown_content)
             log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.md","success")
         except Exception as e:
+            print(traceback.format_exc())
             log(e,"error")
 
 
@@ -761,6 +762,7 @@ def main(page: ft.Page):
             return base64_image
 
         except Exception as e:
+            print(traceback.format_exc())
             log("二维码获取问题：" + e, "error")
             return None
         
@@ -888,6 +890,7 @@ def main(page: ft.Page):
         except PermissionError as e:
             log(f"文件权限不足: {e}. 请尝试选择不同的目录或以管理员身份运行。", "error")
         except Exception as e:
+            print(traceback.format_exc())
             log(f"创建用户目录时发生错误: {e}", "error")
 
 
@@ -906,6 +909,8 @@ def main(page: ft.Page):
             cookies = {'qrsig': page.session.get("qrsig")}
             try:
                 r = requests.get(url, cookies=cookies)
+                r.encoding = 'utf-8'
+                print(r.text)
                 if '二维码未失效' in r.text:
                     qr_status.value = "二维码状态：未失效"
                     pass
@@ -939,6 +944,7 @@ def main(page: ft.Page):
                     except Exception as e:
                         log("登录过程问题：" + e,"error")
             except Exception as e:
+                print(traceback.format_exc())
                 log("二维码状态问题：" + e,"error")
 
             page.update()
@@ -1045,6 +1051,7 @@ def main(page: ft.Page):
                 log(f"获取消息列表数量中... 当前 - Total: {total}")
             return total
         except Exception as e:
+            print(traceback.format_exc())
             log(e, "error")
             return 0
     
@@ -1146,6 +1153,7 @@ def main(page: ft.Page):
                         page.update()
 
                 except Exception as e:
+                    print(traceback.format_exc())
                     log(f"处理消息时发生错误: {e}", "error")
                     continue
 
@@ -1158,6 +1166,7 @@ def main(page: ft.Page):
             page.update()
 
         except Exception as e:
+            print(traceback.format_exc())
             log(f"获取消息时发生错误: {e}", "error")
 
 
