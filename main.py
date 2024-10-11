@@ -141,7 +141,7 @@ def log(message,type="info"):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     log_info_ref.current.value = f"[{now}] - {message}"
     # 写入日志到文件
-    with open("log.txt", "a", encoding="utf-8") as f:
+    with open(f"{save_path}/log.txt", "a", encoding="utf-8") as f:
         f.write(f"[{now}] - {message}\n")
     if type == "success":
         log_info_ref.current.color = "green"
