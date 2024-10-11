@@ -140,6 +140,9 @@ def get_big_img_dlg(img_url):
 def log(message,type="info"):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     log_info_ref.current.value = f"[{now}] - {message}"
+    # 写入日志到文件
+    with open("log.txt", "a", encoding="utf-8") as f:
+        f.write(f"[{now}] - {message}\n")
     if type == "success":
         log_info_ref.current.color = "green"
     elif type == "error":
@@ -715,7 +718,7 @@ def main(page: ft.Page):
 
     def logout():
         page.session.clear()
-        user_info.content.controls[0].src = "https://raw.githubusercontent.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg"
+        user_info.content.controls[0].src = "https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg"
         user_info.content.controls[1].value = "LibraHp"
         global now_login_user
         now_login_user = None
@@ -910,7 +913,6 @@ def main(page: ft.Page):
             try:
                 r = requests.get(url, cookies=cookies)
                 r.encoding = 'utf-8'
-                print(r.text)
                 if '二维码未失效' in r.text:
                     qr_status.value = "二维码状态：未失效"
                     pass
@@ -985,7 +987,7 @@ def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.CENTER,
                     data='not_login'
                 ),
-                ft.Image(src="https://raw.githubusercontent.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/loading.gif", expand=True, data='login_pic', visible=False),
+                ft.Image(src="https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/loading.gif", expand=True, data='login_pic', visible=False),
                 ft.Text("获取空间消息中...", size=24, weight="bold", data='login_text',visible=False),
                 ft.ProgressBar(data='login_progress', visible=False,bar_height=10,border_radius=10),
             ],
@@ -1149,7 +1151,7 @@ def main(page: ft.Page):
                         progress_value = i / int(count / 100)
                         progress_bar.value = progress_value
                         page.window.progress_bar = progress_value
-                        log(f'当前进度：{round(progress_value, 3) * 100}%  第 {i} 页/共 {count/100} 页')
+                        log(f'当前进度：{round(progress_value, 3) * 100}%  第 {i} 页/共 {round(count/100)} 页')
                         page.update()
 
                 except Exception as e:
@@ -1295,7 +1297,7 @@ def main(page: ft.Page):
     user_info = ft.Container(
         content=ft.Column(
             controls=[
-                ft.Image(src="https://raw.githubusercontent.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg", width=80, height=80, border_radius=100),  # Replace with actual avatar URL
+                ft.Image(src="https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg", width=80, height=80, border_radius=100),  # Replace with actual avatar URL
                 ft.Text("LibraHp", size=20, weight="bold")
             ],
             alignment=ft.MainAxisAlignment.CENTER,
@@ -1339,7 +1341,7 @@ def main(page: ft.Page):
     )
 
     try:
-        home_content_md = requests.get("https://raw.githubusercontent.com/LibraHp/GetQzonehistory/gui/README.md").text
+        home_content_md = requests.get("https://raw.gitmirror.com/LibraHp/GetQzonehistory/gui/README.md").text
     except:
         home_content_md = "获取失败"
     # 路由容器
