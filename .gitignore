@@ -162,3 +162,4 @@ cython_debug/
 myenv
 # 导出结果文件夹
 [0-9]*/
+log.txt
