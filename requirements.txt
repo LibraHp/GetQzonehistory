@@ -1,3 +1,4 @@
 beautifulsoup4==4.12.2
 flet==0.24.1
+pandas==2.2.3
 Requests==2.31.0
