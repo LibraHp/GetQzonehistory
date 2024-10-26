@@ -17,6 +17,9 @@ import traceback
 
 # 程序版本
 version = "1.0.2"
+
+is_debug = True
+
 # 初始化所有消息列表
 all_messages = []
 # 初始化说说列表
@@ -139,14 +142,20 @@ def get_big_img_dlg(img_url):
 
 def log(message,type="info"):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
-    log_info_ref.current.value = f"[{now}] - {message}"
+    log_info_ref.current.value = f"[{now}] - [{type}] {message}"
+
     # 写入日志到文件
-    with open(f"log.txt", "a", encoding="utf-8") as f:
-        f.write(f"[{now}] - {message}\n")
+    if is_debug:
+        with open(f"log.txt", "a", encoding="utf-8") as f:
+            f.write(f"[{now}] - {message}\n")
+
     if type == "success":
+        # 开头添加[success]
         log_info_ref.current.color = "green"
     elif type == "error":
         log_info_ref.current.color = "red"
+    elif type == "debug":
+        log_info_ref.current.color = "yellow"
     else:
         log_info_ref.current.color = "blue"
     global_page.update()
@@ -866,8 +875,8 @@ def main(page: ft.Page):
                 # 将文件保存到用户的 ~/Documents/app_data 目录
                 base_path = os.path.join(str(Path.home()), "Documents", "QzoneExport")
             elif system == "Windows":  # 如果是 Windows 系统
-                # 将文件保存到程序的当前运行目录
-                base_path = os.getcwd()
+                # 将文件保存到程序的当前运行目录的results文件夹
+                base_path = os.path.join(os.getcwd(), "results")
             else:  # 其他系统
                 # 将文件保存到程序的当前运行目录
                 base_path = os.getcwd()
@@ -943,11 +952,14 @@ def main(page: ft.Page):
                         progress_bar, login_text = show_login_content()
                         create_card_list_view(progress_bar, login_text)
                         # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
+                        return
                     except Exception as e:
                         log("登录过程问题：" + e,"error")
+                        return
             except Exception as e:
                 print(traceback.format_exc())
                 log("二维码状态问题：" + e,"error")
+                return
 
             page.update()
 
@@ -1002,8 +1014,8 @@ def main(page: ft.Page):
         uin = re.sub(r'o0*', '', cookies.get('uin'))
         params = {
             'uin': uin,
-            'begin_time': '0',
-            'end_time': '0',
+            'begin_time': '',
+            'end_time': '',
             'getappnotification': '1',
             'getnotifi': '1',
             'has_get_key': '0',
@@ -1035,18 +1047,17 @@ def main(page: ft.Page):
     
     def get_message_count():
         try:
-            if page.client_storage.contains_key(f"{now_login_user.uin}_message_count"):
-                return page.client_storage.get(f"{now_login_user.uin}_message_count")
             # 初始的总量范围
             lower_bound = 0
             upper_bound = 10000000  # 假设最大总量为1000000
             total = upper_bound // 2  # 初始的总量为上下界的中间值
             while lower_bound <= upper_bound:
-                response = get_message(total, 100)
-                if "li" in response.text:
+                response = get_message(total, 10)
+                if "img" in response.text:
                     # 请求成功，总量应该在当前总量的右侧
                     lower_bound = total + 1
                 else:
+                    log(response.text)
                     # 请求失败，总量应该在当前总量的左侧
                     upper_bound = total - 1
                 total = (lower_bound + upper_bound) // 2  # 更新总量为新的中间值
@@ -1054,19 +1065,23 @@ def main(page: ft.Page):
             return total
         except Exception as e:
             print(traceback.format_exc())
-            log(e, "error")
-            return 0
+            if is_debug:
+                log(e, "error")
+            return total
     
 
     def get_hitokoto():
-        url = "https://v1.hitokoto.cn/"
-        response = requests.get(url,headers=headers)
-        
-        if response.status_code == 200:
-            data = response.json()
-            return data['hitokoto'], data['from']
-        else:
-            return '匿名', '匿名'
+        try:
+            url = "https://v1.hitokoto.cn/"
+            response = requests.get(url,headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data['hitokoto'], data['from']
+            else:
+                return "故地重游就像是刻舟求剑，但只有那年胜过年年", "互联网"
+        except Exception as e:
+            return "故地重游就像是刻舟求剑，但只有那年胜过年年", "互联网"
         
     def create_card_list_view(progress_bar, login_text):
         try:
@@ -1083,15 +1098,17 @@ def main(page: ft.Page):
                     # 获取消息并解码
                     message_content = get_message(i * 100, 100).content
                     message = message_content.decode('utf-8') if message_content else None
-
+                    # if is_debug:
+                    #     log(message, "debug")
                     # 确保消息内容存在
                     if not message:
                         continue
 
                     # 处理消息
                     html = process_old_html(message)
-
                     # 确保 HTML 中包含有效信息
+                    if is_debug:
+                        log(html, "debug")
                     if "li" not in html:
                         continue
 
@@ -1146,13 +1163,13 @@ def main(page: ft.Page):
 
                         # 添加消息到列表
                         all_messages.append(res_message)
-
-                        # 更新进度条
-                        progress_value = i / int(count / 100)
-                        progress_bar.value = progress_value
-                        page.window.progress_bar = progress_value
-                        log(f'当前进度：{round(progress_value, 3) * 100}%  第 {i} 页/共 {round(count/100)} 页')
                         page.update()
+
+                    # 更新进度条
+                    progress_value = i / int(count / 100)
+                    progress_bar.value = progress_value
+                    page.window.progress_bar = progress_value
+                    log(f'当前进度：{progress_value * 100:.1f}%  第 {i} 页/共 {round(count/100)} 页')
 
                 except Exception as e:
                     print(traceback.format_exc())
@@ -1176,25 +1193,50 @@ def main(page: ft.Page):
         # 用户信息栏
         user_info = ft.Card(
             content=ft.Container(
-                content=ft.Row([
-                    ft.CircleAvatar(
-                        foreground_image_src=now_login_user.avatar_url,
-                        content=ft.Text(f"{now_login_user.username}"), 
-                        radius=40
-                    ),  # 圆形头像
-                    ft.Column(
-                        [
-                            ft.Text("你好！", size=16),
-                            ft.Text(f"{now_login_user.username}", size=20, weight=ft.FontWeight.BOLD),
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                    ),
-                ]),
-                padding=20
+                content=ft.Column(
+                    controls=[
+                        ft.Row([
+                            ft.CircleAvatar(
+                                foreground_image_src=now_login_user.avatar_url,
+                                content=ft.Text(f"{now_login_user.username}"), 
+                                radius=40
+                            ),  # 圆形头像
+                            ft.Column(
+                                [
+                                    ft.Text("你好！", size=16),
+                                    ft.Text(f"{now_login_user.username}", size=20, weight=ft.FontWeight.BOLD),
+                                ],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                            )
+                        ]),
+                        # 操作栏
+                        ft.Row(
+                            controls=[
+                                ft.Column(
+                                    controls=[
+                                        ft.ElevatedButton(text="空间网页版"),
+                                        ft.ElevatedButton(text="打开导出文件夹"),
+                                    ],
+                                ),
+                                ft.Column(
+                                    controls=[
+                                        ft.ElevatedButton(text="重新获取"),
+                                        ft.ElevatedButton(text="保存登录状态"),
+                                    ],
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,  # 按钮列居中对齐
+                            spacing=20  # 列之间的间距
+                        )
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER
+                ),
+                padding=20,
             ),
             height=300,
             col=4
         )
+
 
         # 交互信息栏
         interaction_info = ft.Card(
@@ -1341,9 +1383,9 @@ def main(page: ft.Page):
     )
 
     try:
-        home_content_md = requests.get("https://raw.gitmirror.com/LibraHp/GetQzonehistory/gui/README.md").text
+        home_content_md = requests.get("https://githubraw.com//LibraHp/GetQzonehistory/gui/README.md",timeout=3).text
     except:
-        home_content_md = "获取失败"
+        home_content_md = "获取公告失败，直接点击右侧获取内容即可正常获取"
     # 路由容器
     content_area = ft.Container(
         content=ft.Column(
