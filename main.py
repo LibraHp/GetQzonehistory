@@ -37,14 +37,15 @@ interact_counter = []
 # 初始化当前登录用户
 now_login_user = None
 # 初始化交互排行榜
-most_interactive_user = None
+most_interactive_user = {}
 # 初始化保存路径
-save_path = None
+save_path = ''
 # 日志组件引用
 log_info_ref = ft.Ref[ft.Text]()
 # 全局page
 global_page = ft.Page
-
+# 空间登录链接
+qzone_link = ''
 # 全局header
 headers = {
     'authority': 'user.qzone.qq.com',
@@ -65,9 +66,10 @@ headers = {
                   'Safari/537.36 Edg/121.0.0.0',
 }
 
+
 def bkn(pSkey):
     # 计算bkn
-    
+
     t, n, o = 5381, 0, len(pSkey)
 
     while n < o:
@@ -129,18 +131,20 @@ def parse_time_strings(time_str):
     except ValueError:
         return datetime.now()  # 如果解析失败，返回最早的时间
 
+
 def get_big_img_dlg(img_url):
     return ft.AlertDialog(
         modal=False,
         title=ft.Text("查看大图"),
         content=ft.Column(
             controls=[
-                ft.Image(src=img_url,height=500,fit=ft.ImageFit.FIT_HEIGHT),
+                ft.Image(src=img_url, height=500, fit=ft.ImageFit.FIT_HEIGHT),
             ]
         ),
     )
 
-def log(message,type="info"):
+
+def log(message, type="info"):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     log_info_ref.current.value = f"[{now}] - [{type}] {message}"
 
@@ -150,7 +154,6 @@ def log(message,type="info"):
             f.write(f"[{now}] - {message}\n")
 
     if type == "success":
-        # 开头添加[success]
         log_info_ref.current.color = "green"
     elif type == "error":
         log_info_ref.current.color = "red"
@@ -201,7 +204,7 @@ def clean_content():
         log(f"清理内容时发生错误: {e}", "error")
 
 
-def save_image(url,file_name):
+def save_image(url, file_name):
     global save_path
     valid_file_name = re.sub(r'[<>:"/\\|?*]', '_', file_name)
     try:
@@ -211,7 +214,7 @@ def save_image(url,file_name):
                 f.write(response.content)
                 log(f"图片保存成功：{save_path}/{valid_file_name}.jpg")
     except Exception as e:
-        log(e,"error")
+        log(e, "error")
 
 
 class PaginatedContainer(ft.Column):
@@ -248,24 +251,24 @@ class PaginatedContainer(ft.Column):
             ],
             tooltip="导出为",
         )
-        
+
         if self.data and isinstance(self.data[0], Message):
             export_control.items.append(
                 ft.PopupMenuItem(text="导出为HTML", on_click=self.export_html)
             )
-        
+
         return ft.Column(
             [
                 ft.Row(
                     controls=[
-                        ft.Text(self.title, size=20, weight="bold"),
+                        ft.Text(self.title, size=20, weight=ft.FontWeight.BOLD),
                         ft.Row(
                             controls=[
                                 ft.Text("导出为"),
                                 export_control
                             ]
                         )
-                        
+
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                 ),
@@ -306,8 +309,8 @@ class PaginatedContainer(ft.Column):
                 log("请输入有效的页码。", "error")
         except ValueError:
             log("请输入有效的页码。", "error")
-    
-    def export_json(self,e):
+
+    def export_json(self, e):
         json_data = []
         for item in self.data:
             if isinstance(item, User):
@@ -333,12 +336,11 @@ class PaginatedContainer(ft.Column):
         try:
             with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
                 f.write(json_string)
-            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.json","success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.json", "success")
         except Exception as e:
-            log(e,"error")
+            log(e, "error")
 
-
-    def export_excel(self,e):
+    def export_excel(self, e):
         export_data = []
         for item in self.data:
             if isinstance(item, User):
@@ -363,10 +365,9 @@ class PaginatedContainer(ft.Column):
             df = pd.DataFrame(export_data)
             # 保存为 Excel 文件
             df.to_excel(f"{save_path}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
-            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.xlsx","success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.xlsx", "success")
         except Exception as e:
-            log(e,"error")
-
+            log(e, "error")
 
     def export_html(self, e):
         # HTML 头部和样式
@@ -458,7 +459,7 @@ class PaginatedContainer(ft.Column):
         <body>
             <div class="card-container">
         '''
-        
+
         # HTML 中间部分，动态生成每个数据项的卡片
         html_middle = ''
         for item in self.data:
@@ -503,9 +504,7 @@ class PaginatedContainer(ft.Column):
         except Exception as e:
             log(f"导出失败 {e}", "error")
 
-
-    
-    def export_markdown(self,e):
+    def export_markdown(self, e):
         # 创建 Markdown 内容的列表
         markdown_lines = []
 
@@ -538,16 +537,14 @@ class PaginatedContainer(ft.Column):
 
             with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
                 f.write(markdown_content)
-            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.md","success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.md", "success")
         except Exception as e:
             print(traceback.format_exc())
-            log(e,"error")
-
+            log(e, "error")
 
     def did_mount(self):
         """This method is called when the control is added to the page."""
         self.update_page_info()
-
 
     def update_page_info(self):
         # 更新当前页的内容
@@ -583,7 +580,7 @@ class PaginatedContainer(ft.Column):
                             ft.Image(src=item.avatar_url, fit=ft.ImageFit.COVER, border_radius=100),
                             ft.Column(
                                 controls=[
-                                    ft.Text(item.username, size=18, weight="bold"),
+                                    ft.Text(item.username, size=18, weight=ft.FontWeight.BOLD),
                                     ft.Text(f'QQ: {item.uin}', size=14),
                                     ft.Text(item.link, size=12, color=ft.colors.BLUE_500),
                                 ],
@@ -603,9 +600,9 @@ class PaginatedContainer(ft.Column):
                     ft.Image(src=item.user.avatar_url, fit=ft.ImageFit.COVER, border_radius=100),
                     ft.Column(
                         controls=[
-                            ft.Text(item.user.username, size=18, weight="bold"),
+                            ft.Text(item.user.username, size=18, weight=ft.FontWeight.BOLD),
                             ft.Text(f'{item.time}', size=14),
-                            ft.Text(item.content, size=16,width=300),
+                            ft.Text(item.content, size=16, width=300),
                         ],
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=4,
@@ -615,11 +612,16 @@ class PaginatedContainer(ft.Column):
                 # 如果存在图片，添加到 controls 中
                 if item.images and 'http' in item.images:
                     image_control = ft.PopupMenuButton(
-                        content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH,height=300,width=300,border_radius=10),
+                        content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH, height=300, width=300,
+                                         border_radius=10),
                         items=[
-                            ft.PopupMenuItem(text="复制图片链接", on_click=lambda e, current_item=item: cb.copy(current_item.images)),
-                            ft.PopupMenuItem(text="保存图片", on_click=lambda e, current_item=item: save_image(current_item.images, str(current_item.time))),
-                            ft.PopupMenuItem(text="查看大图", on_click=lambda e, current_item=item: self.page.open(get_big_img_dlg(current_item.images))),
+                            ft.PopupMenuItem(text="复制图片链接",
+                                             on_click=lambda e, current_item=item: cb.copy(current_item.images)),
+                            ft.PopupMenuItem(text="保存图片",
+                                             on_click=lambda e, current_item=item: save_image(current_item.images,
+                                                                                              str(current_item.time))),
+                            ft.PopupMenuItem(text="查看大图", on_click=lambda e, current_item=item: self.page.open(
+                                get_big_img_dlg(current_item.images))),
                         ],
                         tooltip="显示操作",
                     )
@@ -627,7 +629,8 @@ class PaginatedContainer(ft.Column):
 
                 # 如果存在评论，添加到 controls 中
                 if item.comment:
-                    controls[1].controls.append(ft.Text(f'{item.comment.content}', size=12, color=ft.colors.BLUE_700,width=300))
+                    controls[1].controls.append(
+                        ft.Text(f'{item.comment.content}', size=12, color=ft.colors.BLUE_700, width=300))
 
                 card = ft.Card(
                     content=ft.Row(
@@ -656,13 +659,12 @@ class PaginatedContainer(ft.Column):
         # 检查最后一行是否有剩余卡片且未添加
         if current_row.controls:
             rows.controls.append(current_row)
-        
+
         # 如果传入的数据为空
         if not current_data:
             rows.controls.append(ft.Text("没有更多数据了"))
         # 最终将所有卡片的布局添加到 content_area
         self.content_area.controls.append(rows)
-
 
     def next_page(self, e):
         if self.current_page < self.total_pages:
@@ -674,13 +676,14 @@ class PaginatedContainer(ft.Column):
             self.current_page -= 1
             self.update_page_info()
 
+
 class User:
     def __init__(self, uin, username):
         self.uin = str(uin)  # 将 uin 转换为字符串
         self.avatar_url = f'http://q1.qlogo.cn/g?b=qq&nk={self.uin}&s=100'  # 使用 self.uin
         self.username = username
         self.link = f'https://user.qzone.qq.com/{self.uin}/'  # 使用 self.uin
-    
+
 
 class Comment:
     def __init__(self, user, time, content):
@@ -700,13 +703,15 @@ class Message:
 
 
 def reset_save_content():
-    global all_messages, user_says, forward, leaves, other, friends
+    global all_messages, user_says, forward, leaves, other, friends, most_interactive_user, interact_counter
     all_messages = []
     user_says = []
     forward = []
     leaves = []
     other = []
     friends = []
+    most_interactive_user = {}
+    interact_counter = {}
 
 
 def main(page: ft.Page):
@@ -715,19 +720,20 @@ def main(page: ft.Page):
     page.horizontal_alignment = "start"
     page.vertical_alignment = "center"
     # page.window.resizable = False
-    page.padding = ft.padding.only(20,20,20,5)
+    page.padding = ft.padding.only(20, 20, 20, 5)
     page.window.min_height = 700
     page.window.min_width = 1200
     # page.bgcolor = "#f0f0f0"
     # page.window.icon = "https://picsum.photos/200"
     # 字体使用系统默认字体
-    page.theme= ft.Theme(font_family="Microsoft YaHei")
+    page.theme = ft.Theme(font_family="Microsoft YaHei")
     global global_page
     global_page = page
 
     def logout():
         page.session.clear()
-        user_info.content.controls[0].src = "https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg"
+        user_info.content.controls[
+            0].src = "https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg"
         user_info.content.controls[1].value = "LibraHp"
         global now_login_user
         now_login_user = None
@@ -737,7 +743,6 @@ def main(page: ft.Page):
             if tab.data != "GetContent" and tab.data != "Logout" and tab.data != "Github":
                 tab.disabled = True
         page.update()
-                
 
     def handle_close(e):
         page.close(dlg_modal)
@@ -754,8 +759,9 @@ def main(page: ft.Page):
         ],
         actions_alignment=ft.MainAxisAlignment.END
     )
+
     def QR():
-    # 获取 qq空间 二维码
+        # 获取 qq空间 二维码
         url = 'https://ssl.ptlogin2.qq.com/ptqrshow?appid=549000912&e=2&l=M&s=3&d=72&v=4&t=0.8692955245720428&daid=5&pt_3rd_aid=0'
 
         try:
@@ -764,7 +770,7 @@ def main(page: ft.Page):
 
             # 获取二维码图片的二进制内容
             image_data = response.content
-            
+
             # 将二进制内容转换为 Base64 编码
             base64_image = base64.b64encode(image_data).decode('utf-8')
 
@@ -777,37 +783,38 @@ def main(page: ft.Page):
             print(traceback.format_exc())
             log("二维码获取问题：" + e, "error")
             return None
-        
+
     def get_login_user_info():
         cookies = page.session.get("user_cookies")
         g_tk = bkn(cookies['p_skey'])
         uin = re.sub(r'o0*', '', cookies.get('uin'))
-        response = requests.get('https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?g_tk=' + str(g_tk) + '&uins=' + uin,
-                                headers=headers, cookies=cookies)
+        response = requests.get(
+            'https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?g_tk=' + str(g_tk) + '&uins=' + uin,
+            headers=headers, cookies=cookies)
         info = response.content.decode('GBK')
         info = info.strip().lstrip('portraitCallBack(').rstrip(');')
         info = json.loads(info)
         user_info.content.controls[0].src = f'http://q1.qlogo.cn/g?b=qq&nk={uin}&s=100'
         user_info.content.controls[1].value = info[uin][6]
         global now_login_user
-        now_login_user = User(uin,info[uin][6])
+        now_login_user = User(uin, info[uin][6])
         page.update()
-    
+
     # 路由改变函数
     def change_route(e):
         selected_tab = e.control.data
         if selected_tab == "GetContent":
             content_area.content = create_get_content_page()
         elif selected_tab == "User":
-            content_area.content = PaginatedContainer(user_says, items_per_page=2,title="说说列表")
+            content_area.content = PaginatedContainer(user_says, items_per_page=2, title="说说列表")
         elif selected_tab == "Leave":
-            content_area.content = PaginatedContainer(leaves, items_per_page=1,title="留言列表")
+            content_area.content = PaginatedContainer(leaves, items_per_page=1, title="留言列表")
         elif selected_tab == "Friends":
-            content_area.content = PaginatedContainer(friends, items_per_page=4,title="好友列表")
+            content_area.content = PaginatedContainer(friends, items_per_page=4, title="好友列表")
         elif selected_tab == "Forward":
-            content_area.content = PaginatedContainer(forward, items_per_page=2,title="转发列表")
+            content_area.content = PaginatedContainer(forward, items_per_page=2, title="转发列表")
         elif selected_tab == "Other":
-            content_area.content = PaginatedContainer(other, items_per_page=2,title="其他列表")
+            content_area.content = PaginatedContainer(other, items_per_page=2, title="其他列表")
         elif selected_tab == "Pictures":
             content_area.content = create_pictures_page()
         elif selected_tab == "Logout":
@@ -829,11 +836,16 @@ def main(page: ft.Page):
             # 如果存在图片，添加到 controls 中
             if item.images and 'http' in item.images:
                 image_control = ft.PopupMenuButton(
-                    content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH, height=300, width=300, border_radius=10),
+                    content=ft.Image(src=item.images, fit=ft.ImageFit.FIT_WIDTH, height=300, width=300,
+                                     border_radius=10),
                     items=[
-                        ft.PopupMenuItem(text="复制图片链接", on_click=lambda e, current_item=item: cb.copy(current_item.images)),
-                        ft.PopupMenuItem(text="保存图片", on_click=lambda e, current_item=item: save_image(current_item.images, str(current_item.time))),
-                        ft.PopupMenuItem(text="查看大图", on_click=lambda e, current_item=item: page.open(get_big_img_dlg(current_item.images))),
+                        ft.PopupMenuItem(text="复制图片链接",
+                                         on_click=lambda e, current_item=item: cb.copy(current_item.images)),
+                        ft.PopupMenuItem(text="保存图片",
+                                         on_click=lambda e, current_item=item: save_image(current_item.images,
+                                                                                          str(current_item.time))),
+                        ft.PopupMenuItem(text="查看大图", on_click=lambda e, current_item=item: page.open(
+                            get_big_img_dlg(current_item.images))),
                     ],
                     tooltip="显示操作",
                 )
@@ -863,7 +875,6 @@ def main(page: ft.Page):
             elif content.data == 'login_pic':
                 content.visible = True
         return progress_bar, login_text
-
 
     def create_user_dir():
         global save_path
@@ -905,19 +916,18 @@ def main(page: ft.Page):
             print(traceback.format_exc())
             log(f"创建用户目录时发生错误: {e}", "error")
 
-
-    
     # 获取内容页面
     def create_get_content_page():
         if page.session.contains_key("user_cookies"):
             return get_message_result()
         base64_image = QR()
+
         # 更新二维码状态的函数（模拟，需实际实现逻辑）
         def update_qr_code_status(e):
             ptqrtoken = ptqrToken(page.session.get("qrsig"))
             url = 'https://ssl.ptlogin2.qq.com/ptqrlogin?u1=https%3A%2F%2Fqzs.qq.com%2Fqzone%2Fv5%2Floginsucc.html%3Fpara' \
-              '%3Dizone&ptqrtoken=' + str(ptqrtoken) + '&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-' \
-              + str(time.time()) + '&js_ver=20032614&js_type=1&login_sig=&pt_uistyle=40&aid=549000912&daid=5&'
+                  '%3Dizone&ptqrtoken=' + str(ptqrtoken) + '&ptredirect=0&h=1&t=1&g=1&from_ui=1&ptlang=2052&action=0-0-' \
+                  + str(time.time()) + '&js_ver=20032614&js_type=1&login_sig=&pt_uistyle=40&aid=549000912&daid=5&'
             cookies = {'qrsig': page.session.get("qrsig")}
             try:
                 r = requests.get(url, cookies=cookies)
@@ -938,10 +948,12 @@ def main(page: ft.Page):
                     regex = re.compile(r'ptsigx=(.*?)&')
                     sigx = re.findall(regex, r.text)[0]
                     url = 'https://ptlogin2.qzone.qq.com/check_sig?pttype=1&uin=' + uin + '&service=ptqrlogin&nodirect=0' \
-                                                                                        '&ptsigx=' + sigx + \
-                        '&s_url=https%3A%2F%2Fqzs.qq.com%2Fqzone%2Fv5%2Floginsucc.html%3Fpara%3Dizone&f_url=&ptlang' \
-                        '=2052&ptredirect=100&aid=549000912&daid=5&j_later=0&low_login_hour=0&regmaster=0&pt_login_type' \
-                        '=3&pt_aid=0&pt_aaid=16&pt_light=0&pt_3rd_aid=0'
+                                                                                          '&ptsigx=' + sigx + \
+                          '&s_url=https%3A%2F%2Fqzs.qq.com%2Fqzone%2Fv5%2Floginsucc.html%3Fpara%3Dizone&f_url=&ptlang' \
+                          '=2052&ptredirect=100&aid=549000912&daid=5&j_later=0&low_login_hour=0&regmaster=0&pt_login_type' \
+                          '=3&pt_aid=0&pt_aaid=16&pt_light=0&pt_3rd_aid=0'
+                    global qzone_link
+                    qzone_link = url
                     try:
                         r = requests.get(url, cookies=cookies, allow_redirects=False)
                         target_cookies = requests.utils.dict_from_cookiejar(r.cookies)
@@ -954,11 +966,11 @@ def main(page: ft.Page):
                         # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
                         return
                     except Exception as e:
-                        log("登录过程问题：" + e,"error")
+                        log("登录过程问题：" + e, "error")
                         return
             except Exception as e:
                 print(traceback.format_exc())
-                log("二维码状态问题：" + e,"error")
+                log("二维码状态问题：" + e, "error")
                 return
 
             page.update()
@@ -971,8 +983,9 @@ def main(page: ft.Page):
             qr_status.value = "二维码状态：等待扫描"  # 重置状态为等待扫描
             page.update()
 
-        qr_image = ft.Image(src_base64=base64_image, width=200, height=200,fit=ft.ImageFit.CONTAIN, data='not_login')
+        qr_image = ft.Image(src_base64=base64_image, width=200, height=200, fit=ft.ImageFit.CONTAIN, data='not_login')
         qr_status = ft.Text("二维码状态：等待扫描", size=16, color="green", data='not_login')
+
         def task():
             while True:
                 # 使用 in 分别检查多个条件
@@ -981,14 +994,14 @@ def main(page: ft.Page):
                 log(qr_status.value)
                 update_qr_code_status(None)
                 time.sleep(2)
+
         thread = threading.Thread(target=task)
         thread.start()
-
 
         # 返回一个包含二维码和状态更新的布局
         return ft.Column(
             controls=[
-                ft.Text("请使用手机QQ扫码登录", size=24, weight="bold", data='not_login'),
+                ft.Text("请使用手机QQ扫码登录", size=24, weight=ft.FontWeight.BOLD, data='not_login'),
                 qr_image,  # 展示二维码
                 qr_status,  # 展示二维码状态
                 ft.Row(
@@ -999,15 +1012,16 @@ def main(page: ft.Page):
                     alignment=ft.MainAxisAlignment.CENTER,
                     data='not_login'
                 ),
-                ft.Image(src="https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/loading.gif", expand=True, data='login_pic', visible=False),
-                ft.Text("获取空间消息中...", size=24, weight="bold", data='login_text',visible=False),
-                ft.ProgressBar(data='login_progress', visible=False,bar_height=10,border_radius=10),
+                ft.Image(src="https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/loading.gif",
+                         expand=True, data='login_pic', visible=False),
+                ft.Text("获取空间消息中...", size=24, weight=ft.FontWeight.BOLD, data='login_text', visible=False),
+                ft.ProgressBar(data='login_progress', visible=False, bar_height=10, border_radius=10),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
-            horizontal_alignment="center",
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             expand=True,
         )
-    
+
     def get_message(start, count):
         cookies = page.session.get("user_cookies")
         g_tk = bkn(cookies['p_skey'])
@@ -1031,7 +1045,7 @@ def main(page: ft.Page):
                 g_tk,
             ],
         }
-        
+
         try:
             response = requests.get(
                 'https://user.qzone.qq.com/proxy/domain/ic2.qzone.qq.com/cgi-bin/feeds/feeds2_html_pav_all',
@@ -1042,10 +1056,11 @@ def main(page: ft.Page):
             )
         except requests.Timeout:
             return None
-        
+
         return response
-    
+
     def get_message_count():
+        total = 10
         try:
             # 初始的总量范围
             lower_bound = 0
@@ -1068,13 +1083,12 @@ def main(page: ft.Page):
             if is_debug:
                 log(e, "error")
             return total
-    
 
     def get_hitokoto():
         try:
             url = "https://v1.hitokoto.cn/"
-            response = requests.get(url,headers=headers)
-            
+            response = requests.get(url, headers=headers)
+
             if response.status_code == 200:
                 data = response.json()
                 return data['hitokoto'], data['from']
@@ -1082,7 +1096,7 @@ def main(page: ft.Page):
                 return "故地重游就像是刻舟求剑，但只有那年胜过年年", "互联网"
         except Exception as e:
             return "故地重游就像是刻舟求剑，但只有那年胜过年年", "互联网"
-        
+
     def create_card_list_view(progress_bar, login_text):
         try:
             # 创建一个空的卡片列表，用于存放所有卡片
@@ -1124,7 +1138,8 @@ def main(page: ft.Page):
                         friend_element = element.find('a', class_='f-name q_namecard')
                         if friend_element:
                             friend_name = friend_element.get_text()
-                            friend_qq = friend_element.get('link', '')[9:] if friend_element.get('link', '') else '123456' # 使用默认空值
+                            friend_qq = friend_element.get('link', '')[9:] if friend_element.get('link',
+                                                                                                 '') else '123456'  # 使用默认空值
                             friend = User(uin=friend_qq, username=friend_name)
                             comment.user = friend
                             res_message.user = friend
@@ -1144,7 +1159,8 @@ def main(page: ft.Page):
                         # 评论
                         if comment_element:
                             comment_time_element = comment_element.find('span', class_='ui-mr10 state')
-                            comment.time = parse_time_strings(comment_time_element.get_text()) if comment_time_element else None
+                            comment.time = parse_time_strings(
+                                comment_time_element.get_text()) if comment_time_element else None
                             comment.content = comment_element.get_text()
                             res_message.comment = comment
 
@@ -1169,7 +1185,7 @@ def main(page: ft.Page):
                     progress_value = i / int(count / 100)
                     progress_bar.value = progress_value
                     page.window.progress_bar = progress_value
-                    log(f'当前进度：{progress_value * 100:.1f}%  第 {i} 页/共 {round(count/100)} 页')
+                    log(f'当前进度：{progress_value * 100:.1f}%  第 {i} 页/共 {round(count / 100)} 页')
 
                 except Exception as e:
                     print(traceback.format_exc())
@@ -1188,39 +1204,42 @@ def main(page: ft.Page):
             print(traceback.format_exc())
             log(f"获取消息时发生错误: {e}", "error")
 
-
     def get_message_result():
         # 用户信息栏
         user_info = ft.Card(
             content=ft.Container(
                 content=ft.Column(
                     controls=[
-                        ft.Row([
-                            ft.CircleAvatar(
-                                foreground_image_src=now_login_user.avatar_url,
-                                content=ft.Text(f"{now_login_user.username}"), 
-                                radius=40
-                            ),  # 圆形头像
-                            ft.Column(
-                                [
-                                    ft.Text("你好！", size=16),
-                                    ft.Text(f"{now_login_user.username}", size=20, weight=ft.FontWeight.BOLD),
-                                ],
-                                alignment=ft.MainAxisAlignment.CENTER,
-                            )
-                        ]),
+                        ft.Row(
+                            controls=[
+                                ft.CircleAvatar(
+                                    foreground_image_src=now_login_user.avatar_url,
+                                    content=ft.Text(f"{now_login_user.username}"),
+                                    radius=40
+                                ),  # 圆形头像
+                                ft.Column(
+                                    [
+                                        ft.Text("你好！", size=16),
+                                        ft.Text(f"{now_login_user.username}", size=20, weight=ft.FontWeight.BOLD),
+                                    ],
+                                    alignment=ft.MainAxisAlignment.CENTER,
+                                )
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER
+                        ),
+                        ft.Divider(height=9, thickness=3),
                         # 操作栏
                         ft.Row(
                             controls=[
                                 ft.Column(
                                     controls=[
-                                        ft.ElevatedButton(text="空间网页版"),
-                                        ft.ElevatedButton(text="打开导出文件夹"),
+                                        ft.ElevatedButton(text="空间网页版", on_click=lambda _: page.launch_url(qzone_link)),
+                                        ft.ElevatedButton(text="打开文件夹"),
                                     ],
                                 ),
                                 ft.Column(
                                     controls=[
-                                        ft.ElevatedButton(text="重新获取"),
+                                        ft.ElevatedButton(text="重新获取内容"),
                                         ft.ElevatedButton(text="保存登录状态"),
                                     ],
                                 ),
@@ -1237,18 +1256,34 @@ def main(page: ft.Page):
             col=4
         )
 
-
         # 交互信息栏
         interaction_info = ft.Card(
             content=ft.Container(
-                content = ft.Column(
+                content=ft.Column(
                     [
                         ft.Text("自空间交互以来：", size=24, weight=ft.FontWeight.BOLD),
-                        ft.Text(f"你发布了", size=20, spans=[ft.TextSpan(f" {user_says.__len__() } ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("条说说", ft.TextStyle(size=20))]),
-                        ft.Text(f"有", size=20, spans=[ft.TextSpan(f" {leaves.__len__() } ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("条留言", ft.TextStyle(size=20))]),
-                        ft.Text(f"有", size=20,spans=[ft.TextSpan(f" {friends.__len__() } ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("个人与你空间有过交互", ft.TextStyle(size=20))]),
-                        ft.Text(f"最早的说说发布在", size=20, spans=[ft.TextSpan(f" {user_says[user_says.__len__() - 1].time if user_says.__len__() > 0 else '无'} ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("，那个时候的你有这么多烦恼嘛", ft.TextStyle(size=20))]),
-                        ft.Text(f"和你交互最多的人是", size=20, spans=[ft.TextSpan(f" @{most_interactive_user[0][0][0] if most_interactive_user.__len__() > 0 else '无'} ", ft.TextStyle(weight=ft.FontWeight.BOLD,color=ft.colors.BLUE_300)),ft.TextSpan("现在的她/他怎么样了呢", ft.TextStyle(size=20))]),
+                        ft.Text(f"你发布了", size=20, spans=[ft.TextSpan(f" {user_says.__len__()} ",
+                                                                         ft.TextStyle(weight=ft.FontWeight.BOLD,
+                                                                                      color=ft.colors.BLUE_300)),
+                                                             ft.TextSpan("条说说", ft.TextStyle(size=20))]),
+                        ft.Text(f"有", size=20, spans=[ft.TextSpan(f" {leaves.__len__()} ",
+                                                                   ft.TextStyle(weight=ft.FontWeight.BOLD,
+                                                                                color=ft.colors.BLUE_300)),
+                                                       ft.TextSpan("条留言", ft.TextStyle(size=20))]),
+                        ft.Text(f"有", size=20, spans=[ft.TextSpan(f" {friends.__len__()} ",
+                                                                   ft.TextStyle(weight=ft.FontWeight.BOLD,
+                                                                                color=ft.colors.BLUE_300)),
+                                                       ft.TextSpan("个人与你空间有过交互", ft.TextStyle(size=20))]),
+                        ft.Text(f"最早的说说发布在", size=20, spans=[ft.TextSpan(
+                            f" {user_says[user_says.__len__() - 1].time if user_says.__len__() > 0 else '无'} ",
+                            ft.TextStyle(weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_300)),
+                            ft.TextSpan("，那个时候的你有这么多烦恼嘛",
+                                        ft.TextStyle(size=20))]),
+                        ft.Text(f"和你交互最多的人是", size=20, spans=[ft.TextSpan(
+                            f" @{most_interactive_user[0][0][0] if most_interactive_user.__len__() > 0 else '无'} ",
+                            ft.TextStyle(weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_300)),
+                            ft.TextSpan("现在的她/他怎么样了呢",
+                                        ft.TextStyle(size=20))]),
                     ],
                     spacing=10,
                     alignment=ft.MainAxisAlignment.CENTER,
@@ -1259,7 +1294,6 @@ def main(page: ft.Page):
             col=8
         )
 
-
         hitokoto, source = get_hitokoto()
         # 发布的第一条说说
         first_post = ft.Container(
@@ -1269,13 +1303,16 @@ def main(page: ft.Page):
                     ft.Container(
                         content=ft.ResponsiveRow(
                             controls=[
-                                ft.Text(f"{user_says[user_says.__len__() - 1].time if user_says.__len__() > 0 else '无'}", size=14),
-                                ft.Text(f"{user_says[user_says.__len__() - 1].content if user_says.__len__() > 0 else '无'}", size=20)
+                                ft.Text(
+                                    f"{user_says[user_says.__len__() - 1].time if user_says.__len__() > 0 else '无'}",
+                                    size=14),
+                                ft.Text(
+                                    f"{user_says[user_says.__len__() - 1].content if user_says.__len__() > 0 else '无'}",
+                                    size=20)
                             ]
                         ),
                         padding=10,
                         border_radius=ft.border_radius.all(5),
-                        # bgcolor=ft.colors.GREY_100,
                         expand=True,
                     ),
                     ft.Text(f"一言: {hitokoto}\n出自: {source}", size=14)
@@ -1284,11 +1321,11 @@ def main(page: ft.Page):
             col=8,
             expand=True,
         )
-        
+
         # 好友交互排行榜
         friend_action_info = ft.Card(
             content=ft.Container(
-                content = ft.Column(
+                content=ft.Column(
                     controls=[
                         ft.Text("好友交互排行榜", size=18, weight=ft.FontWeight.BOLD),
                     ],
@@ -1306,7 +1343,8 @@ def main(page: ft.Page):
                 ft.Row(
                     controls=[
                         ft.Text(f"{index + 1}.", size=14),
-                        ft.Image(src=f'http://q1.qlogo.cn/g?b=qq&nk={item[0][1]}&s=100', width=40, height=40, border_radius=100),
+                        ft.Image(src=f'http://q1.qlogo.cn/g?b=qq&nk={item[0][1]}&s=100', width=40, height=40,
+                                 border_radius=100),
                         ft.Text(f"@{item[0][0]} 交互{item[1]}次", size=14)
                     ]
                 )
@@ -1315,40 +1353,39 @@ def main(page: ft.Page):
 
         # 布局排列
         return ft.Column(
-                    [
-                        ft.ResponsiveRow(
-                            controls=[
-                                user_info,
-                                interaction_info,
-                            ]
-                        ),
-                        ft.ResponsiveRow(
-                            controls=[
-                                first_post,
-                                friend_action_info
-                            ],
-                            expand=True
-                        )
+            [
+                ft.ResponsiveRow(
+                    controls=[
+                        user_info,
+                        interaction_info,
+                    ]
+                ),
+                ft.ResponsiveRow(
+                    controls=[
+                        first_post,
+                        friend_action_info
                     ],
-                    spacing=20,
-                    expand=True,
+                    expand=True
                 )
-
+            ],
+            spacing=20,
+            expand=True,
+        )
 
     # 用户信息
     user_info = ft.Container(
         content=ft.Column(
             controls=[
-                ft.Image(src="https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg", width=80, height=80, border_radius=100),  # Replace with actual avatar URL
-                ft.Text("LibraHp", size=20, weight="bold")
+                ft.Image(src="https://raw.gitmirror.com/LibraHp/GetQzonehistory/refs/heads/gui/assets/logo.jpg",
+                         width=80, height=80, border_radius=100),  # Replace with actual avatar URL
+                ft.Text("LibraHp", size=20, weight=ft.FontWeight.BOLD)
             ],
             alignment=ft.MainAxisAlignment.CENTER,
-            horizontal_alignment="center"
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         ),
         width=200,
         padding=20
     )
-
 
     # 左侧标签页
     tabs = ft.Column(
@@ -1363,7 +1400,7 @@ def main(page: ft.Page):
             ft.ElevatedButton("退出当前账号登录", on_click=change_route, data="Logout", width=page.width),
             ft.TextButton("Powered by LibraHp", url="https://github.com/LibraHp", data="Github", width=page.width)
         ],
-        alignment="center",
+        alignment=ft.alignment.center,
         spacing=10
     )
 
@@ -1372,7 +1409,7 @@ def main(page: ft.Page):
         content=ft.Column(
             controls=[user_info, tabs],
             spacing=20,
-            horizontal_alignment="center",
+            horizontal_alignment=ft.alignment.center,
             scroll=ft.ScrollMode.HIDDEN,
         ),
         alignment=ft.alignment.center,
@@ -1383,7 +1420,7 @@ def main(page: ft.Page):
     )
 
     try:
-        home_content_md = requests.get("https://githubraw.com//LibraHp/GetQzonehistory/gui/README.md",timeout=3).text
+        home_content_md = requests.get("https://githubraw.com//LibraHp/GetQzonehistory/gui/README.md", timeout=3).text
     except:
         home_content_md = "获取公告失败，直接点击右侧获取内容即可正常获取"
     # 路由容器
@@ -1400,7 +1437,6 @@ def main(page: ft.Page):
             expand=True,
             scroll=ft.ScrollMode.HIDDEN
         ),
-        # bgcolor="#ffffff",
         expand=True,
         padding=20,
         border_radius=10,
@@ -1411,13 +1447,13 @@ def main(page: ft.Page):
     main_layout = ft.ResponsiveRow(
         controls=[left_panel, content_area],
         expand=True,
-        alignment="start"
+        # alignment="start"
     )
 
-    log_list = ft.Text(ref=log_info_ref,size=12, color="blue")
+    log_list = ft.Text(ref=log_info_ref, size=12, color="blue")
     page.add(main_layout)
     page.add(log_list)
-    log("开始运行...","success")
+    log("开始运行...", "success")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,15 @@ RUN python -m venv /app/.venv && \
     /app/.venv/bin/pip install -i https://mirrors.aliyun.com/pypi/simple/ --upgrade pip && \
     /app/.venv/bin/pip install -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
 
+# 使用阿里云的 Debian 镜像源
+RUN echo 'deb http://mirrors.aliyun.com/debian/ bullseye main non-free contrib\n\
+deb-src http://mirrors.aliyun.com/debian/ bullseye main non-free contrib\n\
+deb http://mirrors.aliyun.com/debian-security bullseye-security main\n\
+deb-src http://mirrors.aliyun.com/debian-security bullseye-security main\n\
+deb http://mirrors.aliyun.com/debian/ bullseye-updates main non-free contrib\n\
+deb-src http://mirrors.aliyun.com/debian/ bullseye-updates main non-free contrib' > /etc/apt/sources.list
+
+# 安装必要的库
 RUN apt-get update && apt-get install -y libgtk-3-0
 
 # 安装 NGINX

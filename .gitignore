@@ -160,6 +160,7 @@ cython_debug/
 #.idea/
 
 myenv
+results
 # 导出结果文件夹
 [0-9]*/
 log.txt
