@@ -1,0 +1,27 @@
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 0, 2, 0),
+    prodvers=(1, 0, 2, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x4,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+    ),
+  kids=[
+    StringFileInfo(
+      [
+      StringTable(
+        '040904B0',
+        [StringStruct('CompanyName', 'LibraHp'),
+        StringStruct('FileDescription', '获取QQ空间发布的历史内容'),
+        StringStruct('FileVersion', '1.0.2'),
+        StringStruct('InternalName', 'GetQzoneHistory'),
+        StringStruct('OriginalFilename', 'GetQzoneHistory.exe'),
+        StringStruct('ProductName', 'GetQzoneHistory'),
+        StringStruct('ProductVersion', '1.0.2')]
+      )]),
+    VarFileInfo([VarStruct('Translation', [0, 1200])])
+  ]
+)
