@@ -14,11 +14,12 @@ import pandas.io.clipboard as cb
 import platform
 from pathlib import Path
 import traceback
+import dateparser
 
 # 程序版本
 version = "1.0.2"
 
-is_debug = True
+is_debug = False
 
 # 初始化所有消息列表
 all_messages = []
@@ -118,18 +119,14 @@ def process_old_html(message):
 
 
 def parse_time_strings(time_str):
-    today = datetime.today().date()  # 获取今天的日期
-    try:
-        if len(time_str) == 5:  # 格式为 HH:MM
-            return datetime.combine(today, datetime.strptime(time_str, "%H:%M").time())
-        elif "年" in time_str:  # 包含“年”的格式
-            return datetime.strptime(time_str, "%Y年%m月%d日 %H:%M")
-        elif "月" in time_str:  # 包含“月”的格式
-            return datetime.strptime(time_str, "%m月%d日 %H:%M").replace(year=today.year)
-        else:
-            return datetime.now()  # 不符合任何格式时返回最早的时间
-    except ValueError:
-        return datetime.now()  # 如果解析失败，返回最早的时间
+    time_str = time_str.replace(' ', '')
+    date_obj = dateparser.parse(time_str)
+    if date_obj is None:
+        current_year = str(datetime.now().year)
+        time_str_with_year = current_year + "年" + time_str
+        date_obj = dateparser.parse(time_str_with_year)
+
+    return date_obj if date_obj is not None else datetime.now()
 
 
 def get_big_img_dlg(img_url):
@@ -144,7 +141,7 @@ def get_big_img_dlg(img_url):
     )
 
 
-def log(message, type="info"):
+def log(message, type="INFO"):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     log_info_ref.current.value = f"[{now}] - [{type}] {message}"
 
@@ -153,11 +150,11 @@ def log(message, type="info"):
         with open(f"log.txt", "a", encoding="utf-8") as f:
             f.write(f"[{now}] - {message}\n")
 
-    if type == "success":
+    if type == "SUCCESS":
         log_info_ref.current.color = "green"
-    elif type == "error":
+    elif type == "ERROR":
         log_info_ref.current.color = "red"
-    elif type == "debug":
+    elif type == "DEBUG":
         log_info_ref.current.color = "yellow"
     else:
         log_info_ref.current.color = "blue"
@@ -201,7 +198,7 @@ def clean_content():
             message.content = content.replace(now_login_user.username, '')
     except Exception as e:
         print(traceback.format_exc())
-        log(f"清理内容时发生错误: {e}", "error")
+        log(f"清理内容时发生错误: {e}", "ERROR")
 
 
 def save_image(url, file_name):
@@ -214,7 +211,7 @@ def save_image(url, file_name):
                 f.write(response.content)
                 log(f"图片保存成功：{save_path}/{valid_file_name}.jpg")
     except Exception as e:
-        log(e, "error")
+        log(e, "ERROR")
 
 
 class PaginatedContainer(ft.Column):
@@ -306,9 +303,9 @@ class PaginatedContainer(ft.Column):
                 self.current_page = target_page
                 self.update_page_info()
             else:
-                log("请输入有效的页码。", "error")
+                log("请输入有效的页码。", "ERROR")
         except ValueError:
-            log("请输入有效的页码。", "error")
+            log("请输入有效的页码。", "ERROR")
 
     def export_json(self, e):
         json_data = []
@@ -336,9 +333,9 @@ class PaginatedContainer(ft.Column):
         try:
             with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.json", "w", encoding="utf-8") as f:
                 f.write(json_string)
-            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.json", "success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.json", "SUCCESS")
         except Exception as e:
-            log(e, "error")
+            log(e, "ERROR")
 
     def export_excel(self, e):
         export_data = []
@@ -365,9 +362,9 @@ class PaginatedContainer(ft.Column):
             df = pd.DataFrame(export_data)
             # 保存为 Excel 文件
             df.to_excel(f"{save_path}/{now_login_user.uin}_{self.title}_data.xlsx", index=False)
-            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.xlsx", "success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.xlsx", "SUCCESS")
         except Exception as e:
-            log(e, "error")
+            log(e, "ERROR")
 
     def export_html(self, e):
         # HTML 头部和样式
@@ -500,9 +497,9 @@ class PaginatedContainer(ft.Column):
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             # 日志记录
-            log(f"导出成功 请查看 {save_path}/{file_name}", "success")
+            log(f"导出成功 请查看 {save_path}/{file_name}", "SUCCESS")
         except Exception as e:
-            log(f"导出失败 {e}", "error")
+            log(f"导出失败 {e}", "ERROR")
 
     def export_markdown(self, e):
         # 创建 Markdown 内容的列表
@@ -537,10 +534,10 @@ class PaginatedContainer(ft.Column):
 
             with open(f"{save_path}/{now_login_user.uin}_{self.title}_data.md", 'w', encoding='utf-8') as f:
                 f.write(markdown_content)
-            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.md", "success")
+            log(f"导出成功 请查看 {save_path}/{now_login_user.uin}_{self.title}_data.md", "SUCCESS")
         except Exception as e:
             print(traceback.format_exc())
-            log(e, "error")
+            log(e, "ERROR")
 
     def did_mount(self):
         """This method is called when the control is added to the page."""
@@ -719,6 +716,7 @@ def main(page: ft.Page):
     page.title = f"QQ空间历史内容获取 v{version} Powered by LibraHp"
     page.horizontal_alignment = "start"
     page.vertical_alignment = "center"
+    page.window.icon = "assets/icon.ico"
     # page.window.resizable = False
     page.padding = ft.padding.only(20, 20, 20, 5)
     page.window.min_height = 700
@@ -781,7 +779,7 @@ def main(page: ft.Page):
 
         except Exception as e:
             print(traceback.format_exc())
-            log("二维码获取问题：" + e, "error")
+            log("二维码获取问题：" + e, "ERROR")
             return None
 
     def get_login_user_info():
@@ -908,13 +906,13 @@ def main(page: ft.Page):
                 os.makedirs(user_path, exist_ok=True)
 
             save_path = user_path  # 更新全局保存路径
-            log(f"用户目录创建成功: {save_path}", "success")
+            log(f"用户目录创建成功: {save_path}", "SUCCESS")
 
         except PermissionError as e:
-            log(f"文件权限不足: {e}. 请尝试选择不同的目录或以管理员身份运行。", "error")
+            log(f"文件权限不足: {e}. 请尝试选择不同的目录或以管理员身份运行。", "ERROR")
         except Exception as e:
             print(traceback.format_exc())
-            log(f"创建用户目录时发生错误: {e}", "error")
+            log(f"创建用户目录时发生错误: {e}", "ERROR")
 
     # 获取内容页面
     def create_get_content_page():
@@ -958,7 +956,7 @@ def main(page: ft.Page):
                         r = requests.get(url, cookies=cookies, allow_redirects=False)
                         target_cookies = requests.utils.dict_from_cookiejar(r.cookies)
                         page.session.set("user_cookies", target_cookies)
-                        log(f"登录成功,欢迎您，{page.session.get('user_cookies')['uin']}", "success")
+                        log(f"登录成功,欢迎您，{page.session.get('user_cookies')['uin']}", "SUCCESS")
                         get_login_user_info()
                         create_user_dir()
                         progress_bar, login_text = show_login_content()
@@ -966,11 +964,11 @@ def main(page: ft.Page):
                         # p_skey = requests.utils.dict_from_cookiejar(r.cookies).get('p_skey')
                         return
                     except Exception as e:
-                        log("登录过程问题：" + e, "error")
+                        log("登录过程问题：" + e, "ERROR")
                         return
             except Exception as e:
                 print(traceback.format_exc())
-                log("二维码状态问题：" + e, "error")
+                log("二维码状态问题：" + e, "ERROR")
                 return
 
             page.update()
@@ -1054,8 +1052,8 @@ def main(page: ft.Page):
                 headers=headers,
                 timeout=(5, 10)  # 设置连接超时为5秒，读取超时为10秒
             )
-        except requests.Timeout:
-            return None
+        except Exception as e:
+            return 'None'
 
         return response
 
@@ -1081,7 +1079,7 @@ def main(page: ft.Page):
         except Exception as e:
             print(traceback.format_exc())
             if is_debug:
-                log(e, "error")
+                log(e, "ERROR")
             return total
 
     def get_hitokoto():
@@ -1113,7 +1111,7 @@ def main(page: ft.Page):
                     message_content = get_message(i * 100, 100).content
                     message = message_content.decode('utf-8') if message_content else None
                     # if is_debug:
-                    #     log(message, "debug")
+                    #     log(message, "DEBUG")
                     # 确保消息内容存在
                     if not message:
                         continue
@@ -1122,7 +1120,7 @@ def main(page: ft.Page):
                     html = process_old_html(message)
                     # 确保 HTML 中包含有效信息
                     if is_debug:
-                        log(html, "debug")
+                        log(html, "DEBUG")
                     if "li" not in html:
                         continue
 
@@ -1189,12 +1187,12 @@ def main(page: ft.Page):
 
                 except Exception as e:
                     print(traceback.format_exc())
-                    log(f"处理消息时发生错误: {e}", "error")
+                    log(f"处理消息时发生错误: {e}", "ERROR")
                     continue
 
             # 完成消息获取
             content_area.content.clean()
-            log("获取成功！", "success")
+            log("获取成功！", "SUCCESS")
             clean_content()
             unlock_tabs()
             content_area.content.controls.append(get_message_result())
@@ -1202,7 +1200,7 @@ def main(page: ft.Page):
 
         except Exception as e:
             print(traceback.format_exc())
-            log(f"获取消息时发生错误: {e}", "error")
+            log(f"获取消息时发生错误: {e}", "ERROR")
 
     def get_message_result():
         # 用户信息栏
@@ -1453,7 +1451,7 @@ def main(page: ft.Page):
     log_list = ft.Text(ref=log_info_ref, size=12, color="blue")
     page.add(main_layout)
     page.add(log_list)
-    log("开始运行...", "success")
+    log("开始运行...", "SUCCESS")
 
 
 if __name__ == "__main__":
