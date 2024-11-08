@@ -55,9 +55,9 @@ def show_author_info():
 
     author_info = f"{YELLOW}bilibili{RESET} {BLUE}@高数带我飞{RESET} {YELLOW}GetQzonehistory V1.0{RESET}"
     print(author_info)
-    print(f'{RED}程序完全免费，且在github开源！！！！{RESET}')
-    print(f'{RED}程序完全免费，且在github开源！！！！{RESET}')
-    print(f'{RED}程序完全免费，且在github开源！！！！{RESET}')
+    print(f'{RED}程序完全免费，且在GitHub开源！！！！{RESET}')
+    print(f'{RED}程序完全免费，且在GitHub开源！！！！{RESET}')
+    print(f'{RED}程序完全免费，且在GitHub开源！！！！{RESET}')
 
 
 def get_html_template():
