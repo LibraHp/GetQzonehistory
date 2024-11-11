@@ -786,16 +786,21 @@ def main(page: ft.Page):
         cookies = page.session.get("user_cookies")
         g_tk = bkn(cookies['p_skey'])
         uin = re.sub(r'o0*', '', cookies.get('uin'))
-        response = requests.get(
-            'https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?g_tk=' + str(g_tk) + '&uins=' + uin,
-            headers=headers, cookies=cookies)
+        params = {
+            'get_all': '1',
+            'uin': uin,
+            'g_tk': g_tk
+        }
+
+        response = requests.get('https://h5.qzone.qq.com/proxy/domain/vip.qzone.qq.com/fcg-bin/fcg_get_vipinfo_mobile',
+                                params=params, cookies=cookies, headers=headers)
         info = response.content.decode('GBK')
-        info = info.strip().lstrip('portraitCallBack(').rstrip(');')
+        info = info.strip().lstrip('_Callback(').rstrip(');')
         info = json.loads(info)
         user_info.content.controls[0].src = f'http://q1.qlogo.cn/g?b=qq&nk={uin}&s=100'
-        user_info.content.controls[1].value = info[uin][6]
+        user_info.content.controls[1].value = info['data']['nick']
         global now_login_user
-        now_login_user = User(uin, info[uin][6])
+        now_login_user = User(uin, info['data']['nick'])
         page.update()
 
     # 路由改变函数
@@ -1225,26 +1230,6 @@ def main(page: ft.Page):
                             ],
                             alignment=ft.MainAxisAlignment.CENTER
                         ),
-                        ft.Divider(height=9, thickness=3),
-                        # 操作栏
-                        ft.Row(
-                            controls=[
-                                ft.Column(
-                                    controls=[
-                                        ft.ElevatedButton(text="空间网页版", on_click=lambda _: page.launch_url(qzone_link)),
-                                        ft.ElevatedButton(text="打开文件夹"),
-                                    ],
-                                ),
-                                ft.Column(
-                                    controls=[
-                                        ft.ElevatedButton(text="重新获取内容"),
-                                        ft.ElevatedButton(text="保存登录状态"),
-                                    ],
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.CENTER,  # 按钮列居中对齐
-                            spacing=20  # 列之间的间距
-                        )
                     ],
                     alignment=ft.MainAxisAlignment.CENTER
                 ),
