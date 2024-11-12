@@ -3,7 +3,9 @@ from tqdm import tqdm
 import util.LoginUtil as Login
 import requests
 import json
+from fake_useragent import UserAgent
 
+ua = UserAgent()
 # 登陆后获取到的cookies
 cookies = Login.cookie()
 # 获取g_tk
@@ -26,8 +28,7 @@ headers = {
     'sec-fetch-site': 'none',
     'sec-fetch-user': '?1',
     'upgrade-insecure-requests': '1',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 '
-                  'Safari/537.36 Edg/121.0.0.0',
+    'user-agent': ua.safari,
 }
 
 
