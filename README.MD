@@ -1,5 +1,7 @@
 # GetQzonehistory(获取qq发布的历史说说)
 
+已经打包好的单文件可以直接执行，在release页面。
+
 
 <details><summary><font color="#FF0000" size="5">免责声明【必读】</font></summary>
 
