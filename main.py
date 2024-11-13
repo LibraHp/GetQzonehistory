@@ -1142,8 +1142,8 @@ def main(page: ft.Page):
             for i in range(int(count / 100) + 1):
                 try:
                     # 获取消息并解码
-                    message_content = get_message(i * 100, 100).content
-                    message = message_content.decode('utf-8') if message_content else None
+                    message_content = get_message(i * 100, 100).text
+                    message = message_content if message_content else None
                     # if is_debug:
                     #     log(message, "DEBUG")
                     # 确保消息内容存在
