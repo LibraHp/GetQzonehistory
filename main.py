@@ -14,6 +14,7 @@ from tqdm import trange, tqdm
 import requests
 import time
 import platform
+import chardet
 
 texts = list()
 all_friends = list()
@@ -234,7 +235,9 @@ if __name__ == '__main__':
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         for i in trange(int(count / 100) + 1, desc='Progress', unit='100条'):
-            message = Request.get_message(i * 100, 100).content.decode('utf-8')
+            content_bytes = Request.get_message(i * 100, 100).content
+            detected_encoding = chardet.detect(content_bytes)['encoding']
+            message = content_bytes.decode(detected_encoding if detected_encoding else "utf-8")
             time.sleep(0.2)
             html = Tools.process_old_html(message)
             if "li" not in html:
