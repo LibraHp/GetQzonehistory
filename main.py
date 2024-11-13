@@ -1051,7 +1051,7 @@ def main(page: ft.Page):
     def get_message(start, count):
         while True:
             message_content = get_message_unsafe(start, count)
-            if message_content.encoding.lower() == 'utf-8':
+            if isinstance(message_content.encoding, str) and message_content.encoding.lower() == 'utf-8':
                 return message_content
 
     def get_message_unsafe(start, count):
