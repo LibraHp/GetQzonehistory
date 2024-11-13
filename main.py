@@ -17,7 +17,9 @@ import traceback
 import dateparser
 import hashlib
 import copy
+from fake_useragent import UserAgent
 
+ua = UserAgent()
 # 程序版本
 version = "1.0.2"
 
@@ -66,7 +68,7 @@ headers = {
     'sec-fetch-user': '?1',
     'upgrade-insecure-requests': '1',
     # Temporarily fix waf issues
-    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15',
+    'user-agent': ua.random,
 }
 
 
@@ -1050,9 +1052,9 @@ def main(page: ft.Page):
 
     def get_message(start, count):
         while True:
-            message_content = get_message_unsafe(start, count)
-            if message_content.encoding.lower() == 'utf-8':
-                return message_content
+            mc = get_message_unsafe(start, count)
+            if isinstance(mc, requests.Response) and mc.status_code == 200 and mc.encoding.lower() == 'utf-8':
+                return mc
 
     def get_message_unsafe(start, count):
         cookies = page.session.get("user_cookies")
@@ -1086,10 +1088,9 @@ def main(page: ft.Page):
                 headers=headers,
                 timeout=(5, 10)  # 设置连接超时为5秒，读取超时为10秒
             )
+            return response
         except Exception as e:
-            return 'None'
-
-        return response
+            return None
 
     def get_message_count():
         total = 10
