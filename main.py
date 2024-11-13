@@ -15,6 +15,8 @@ import platform
 from pathlib import Path
 import traceback
 import dateparser
+import hashlib
+import copy
 
 # 程序版本
 version = "1.0.2"
@@ -78,6 +80,12 @@ def bkn(pSkey):
         n += 1
 
     return t & 2147483647
+
+
+def string_to_md5(input_string):
+    md5_hash = hashlib.md5()
+    md5_hash.update(input_string.encode('utf-8'))
+    return md5_hash.hexdigest()
 
 
 def ptqrToken(qrsig):
@@ -201,15 +209,14 @@ def clean_content():
         log(f"清理内容时发生错误: {e}", "ERROR")
 
 
-def save_image(url, file_name):
-    global save_path
+def save_image(url, path2save, file_name):
     valid_file_name = re.sub(r'[<>:"/\\|?*]', '_', file_name)
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            with open(f'{save_path}/{valid_file_name}.jpg', 'wb') as f:
+            with open(f'{path2save}/{valid_file_name}.jpg', 'wb') as f:
                 f.write(response.content)
-                log(f"图片保存成功：{save_path}/{valid_file_name}.jpg")
+                log(f"图片保存成功：{path2save}/{valid_file_name}.jpg")
     except Exception as e:
         log(e, "ERROR")
 
@@ -367,6 +374,18 @@ class PaginatedContainer(ft.Column):
             log(e, "ERROR")
 
     def export_html(self, e):
+        global save_path
+        image_path = os.path.join(save_path, "images")
+        os.makedirs(image_path, exist_ok=True)
+        data = copy.deepcopy(self.data)
+        for item in data:
+            if item.images and 'http' in item.images:
+                image_name_md5 = string_to_md5(item.images)
+                image_file_path = os.path.join(image_path, f"{image_name_md5}.jpg")
+                if not os.path.exists(image_file_path):
+                    save_image(item.images, image_path, image_name_md5)
+                relative_img_path = os.path.join("./images", image_name_md5) + ".jpg"
+                item.images = relative_img_path
         # HTML 头部和样式
         html_start = '''
         <!DOCTYPE html>
@@ -459,7 +478,7 @@ class PaginatedContainer(ft.Column):
 
         # HTML 中间部分，动态生成每个数据项的卡片
         html_middle = ''
-        for item in self.data:
+        for item in data:
             # 处理每个数据项的内容，包括用户头像、用户名、发布时间、内容等
             html_middle += f'''
                 <div class="card">
@@ -472,7 +491,7 @@ class PaginatedContainer(ft.Column):
                     </div>
                     <div class="card-content">
                         <p class="text">{item.content}</p>
-                        {f'<img src="{item.images}" alt="post-image" class="card-image">' if item.images and 'http' in item.images else ''}
+                        {f'<img src="{item.images}" alt="post-image" class="card-image">' if item.images else ''}
                     </div>
                     <div class="card-footer">
                         {f'<span class="comments">{item.comment.content}</span>' if item.comment else ''}
@@ -554,6 +573,7 @@ class PaginatedContainer(ft.Column):
         self.update()
 
     def load_page_data(self):
+        global save_path
         # 获取当前页的数据
         start = (self.current_page - 1) * self.items_per_page
         end = start + self.items_per_page
@@ -616,6 +636,7 @@ class PaginatedContainer(ft.Column):
                                              on_click=lambda e, current_item=item: cb.copy(current_item.images)),
                             ft.PopupMenuItem(text="保存图片",
                                              on_click=lambda e, current_item=item: save_image(current_item.images,
+                                                                                              save_path,
                                                                                               str(current_item.time))),
                             ft.PopupMenuItem(text="查看大图", on_click=lambda e, current_item=item: self.page.open(
                                 get_big_img_dlg(current_item.images))),
@@ -826,6 +847,7 @@ def main(page: ft.Page):
         page.update()
 
     def create_pictures_page():
+        global save_path
         pictures_page = ft.GridView(
             expand=1,
             runs_count=5,
@@ -846,6 +868,7 @@ def main(page: ft.Page):
                                          on_click=lambda e, current_item=item: cb.copy(current_item.images)),
                         ft.PopupMenuItem(text="保存图片",
                                          on_click=lambda e, current_item=item: save_image(current_item.images,
+                                                                                          save_path,
                                                                                           str(current_item.time))),
                         ft.PopupMenuItem(text="查看大图", on_click=lambda e, current_item=item: page.open(
                             get_big_img_dlg(current_item.images))),
