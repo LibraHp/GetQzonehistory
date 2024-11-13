@@ -1180,7 +1180,7 @@ def main(page: ft.Page):
                             res_message.content = text_element.get_text().replace('\xa0', ' ')
 
                         # 图片处理
-                        if img_element:
+                        if img_element is not None and img_element.find('img') is not None:
                             img_src = img_element.find('img').get('src')
                             if img_src:
                                 img_src = img_src.replace("/m&ek=1&kp=1", "/s&ek=1&kp=1").replace(r"!/m/", "!/s/")
