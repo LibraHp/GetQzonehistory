@@ -1,0 +1,162 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - gui
+  pull_request:
+    branches:
+      - gui
+  workflow_dispatch:
+
+env:
+  BUILD_NUMBER: 1
+  BUILD_VERSION: 1.0.2
+  PYTHON_VERSION: 3.12.2
+  FLUTTER_VERSION: 3.24.0
+  LATEST_RELEASE_TAG: 'latest'
+
+jobs:
+  build-macos-aarch64:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+
+    - name: Flet Build macOS (aarch64)
+      run: |
+        flet pack --name GetQzonehistory-latest main.py
+
+    - name: Zip the macOS (aarch64) build
+      run: |
+        zip -r GetQzoneHistory-GUI-macOS-aarch64-latest.zip ./dist/GetQzonehistory-latest.app
+
+    - name: Upload macOS (aarch64) Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-aarch64-build-artifact
+        path: ./GetQzoneHistory-GUI-macOS-aarch64-latest.zip
+
+  build-macos-x86:
+    runs-on: macos-13
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+
+    - name: Flet Build macOS (x86_64)
+      run: |
+        flet pack --name GetQzonehistory-latest main.py
+
+    - name: Zip the macOS (x86_64) build
+      run: |
+        zip -r GetQzoneHistory-GUI-macOS-x86_64-latest.zip ./dist/GetQzonehistory-latest.app
+
+    - name: Upload macOS (x86_64) Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-x86_64-build-artifact
+        path: ./GetQzoneHistory-GUI-macOS-x86_64-latest.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+
+    - name: Flet Build Windows
+      run: |
+        flet pack --name GetQzonehistory-latest main.py
+
+    - name: Zip the Windows build using PowerShell
+      shell: pwsh
+      run: |
+        Compress-Archive -Path ./dist/GetQzonehistory-latest.exe -DestinationPath GetQzoneHistory-GUI-Windows-x86_64-latest.zip
+
+    - name: Upload Windows Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build-artifact
+        path: ./GetQzoneHistory-GUI-Windows-x86_64-latest.zip
+
+  release:
+    needs: [build-macos-aarch64, build-macos-x86, build-windows]  # Release will run after all builds are completed
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download macOS (aarch64) Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-aarch64-build-artifact
+
+    - name: Download macOS (x86_64) Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-x86_64-build-artifact
+
+    - name: Download Windows Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-build-artifact
+
+    - name: Delete tag
+      run: |
+        gh release delete ${{ env.LATEST_RELEASE_TAG }} --cleanup-tag -y || true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Release and Upload Assets
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.LATEST_RELEASE_TAG }}
+        body: 'This release was created by GitHub Actions automatically. There is the latest version of GetQzonehistory.'
+        files: './*.zip'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
