@@ -17,7 +17,9 @@ import traceback
 import dateparser
 import hashlib
 import copy
+from fake_useragent import UserAgent
 
+ua = UserAgent()
 # 程序版本
 version = "1.0.2"
 
@@ -66,7 +68,7 @@ headers = {
     'sec-fetch-user': '?1',
     'upgrade-insecure-requests': '1',
     # Temporarily fix waf issues
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0',
+    'user-agent': ua.random,
 }
 
 
@@ -1049,7 +1051,6 @@ def main(page: ft.Page):
         )
 
     def get_message(start, count):
-        global is_stop
         for i in range(5):
             if i == 4:
                 log("请求频繁，换个时间再试吧", "ERROR")
@@ -1235,7 +1236,7 @@ def main(page: ft.Page):
             # 完成消息获取
             content_area.content.clean()
             if is_stop:
-                log("获取失败，换个时间再来吧", "ERROR")
+                log("获取失败，换个时间再来吧", "WARNING")
             else:
                 log("获取成功！", "SUCCESS")
             clean_content()

@@ -4,4 +4,5 @@ pandas==2.2.3
 Requests==2.31.0
 openpyxl==3.1.5
 dateparser==1.2.0
+fake-useragent==1.5.1
 pyinstaller==6.11.0
