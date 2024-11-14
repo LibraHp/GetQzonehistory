@@ -55,7 +55,7 @@ jobs:
         name: macos-aarch64-build-artifact
         path: ./GetQzoneHistory-GUI-macOS-aarch64-latest.zip
 
-  build-macos-x86:
+  build-macos-x86_64:
     runs-on: macos-13
     steps:
     - name: Checkout code
@@ -127,7 +127,7 @@ jobs:
         path: ./GetQzoneHistory-GUI-Windows-x86_64-latest.zip
 
   release:
-    needs: [build-macos-aarch64, build-macos-x86, build-windows]  # Release will run after all builds are completed
+    needs: [build-macos-aarch64, build-macos-x86_64, build-windows]  # Release will run after all builds are completed
     runs-on: ubuntu-latest
 
     steps:
