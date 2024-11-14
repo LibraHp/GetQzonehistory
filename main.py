@@ -17,9 +17,6 @@ import traceback
 import dateparser
 import hashlib
 import copy
-from fake_useragent import UserAgent
-
-ua = UserAgent()
 # 程序版本
 version = "1.0.2"
 
@@ -68,7 +65,7 @@ headers = {
     'sec-fetch-user': '?1',
     'upgrade-insecure-requests': '1',
     # Temporarily fix waf issues
-    'user-agent': ua.random,
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0',
 }
 
 
