@@ -6,5 +6,6 @@ Pillow==11.0.0
 pyarrow==18.0.0
 openpyxl==3.1.5
 pyzbar~=0.1.9
-qrcode~=8.0
-fake-useragent
+qrcode~=7.4.2
+fake-useragent~=1.5.1
+chardet~=5.2.0
