@@ -9,10 +9,13 @@ on:
       - gui
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   BUILD_NUMBER: 1
   BUILD_VERSION: 1.0.2
-  PYTHON_VERSION: 3.12.2
+  PYTHON_VERSION: 3.9.20
   FLUTTER_VERSION: 3.24.0
   LATEST_RELEASE_TAG: 'latest'
 
@@ -40,7 +43,7 @@ jobs:
 
     - name: Flet Build macOS (aarch64)
       run: |
-        flet pack --name GetQzonehistory-latest main.py
+        flet pack --name GetQzonehistory-latest main.py -i .\assets\icon.ico
 
     - name: Zip the macOS (aarch64) build
       run: |
@@ -75,7 +78,7 @@ jobs:
 
     - name: Flet Build macOS (x86_64)
       run: |
-        flet pack --name GetQzonehistory-latest main.py
+        flet pack --name GetQzonehistory-latest main.py -i .\assets\icon.ico
 
     - name: Zip the macOS (x86_64) build
       run: |
@@ -110,7 +113,7 @@ jobs:
 
     - name: Flet Build Windows
       run: |
-        flet pack --name GetQzonehistory-latest main.py
+        flet pack --name GetQzonehistory-latest main.py -i .\assets\icon.ico
 
     - name: Zip the Windows build using PowerShell
       shell: pwsh
@@ -150,7 +153,7 @@ jobs:
       run: |
         gh release delete ${{ env.LATEST_RELEASE_TAG }} --cleanup-tag -y || true
       env:
-        GITHUB_TOKEN: ${{ secrets.DEPLOY_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create Release and Upload Assets
       uses: softprops/action-gh-release@v2
@@ -159,4 +162,4 @@ jobs:
         body: 'This release was created by GitHub Actions automatically. There is the latest version of GetQzonehistory.'
         files: './*.zip'
       env:
-        GITHUB_TOKEN: ${{ secrets.DEPLOY_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
