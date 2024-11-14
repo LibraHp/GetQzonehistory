@@ -127,7 +127,7 @@ jobs:
         path: ./GetQzoneHistory-GUI-Windows-x86_64-latest.zip
 
   release:
-    needs: [build-macos-aarch64, build-macos-x86, build-windows]  # Release will run after all builds are completed
+    needs: [build-macos-aarch64, build-macos-x86_64, build-windows]  # Release will run after all builds are completed
     runs-on: ubuntu-latest
 
     steps:
