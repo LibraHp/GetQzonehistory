@@ -191,7 +191,10 @@ def save_data():
     current_directory = os.getcwd()
     # os.startfile(current_directory + user_save_path[1:])
     open_file(current_directory + user_save_path[1:])
-    os.system('pause')
+    if platform.system() == 'Windows':
+        os.system('pause')
+    else:
+        os.system('stty raw -echo;dd bs=1 count=1 >/dev/null 2>&1;stty cooked echo')
 
 
 # 打开文件展示

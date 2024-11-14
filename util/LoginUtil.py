@@ -1,5 +1,7 @@
 import platform
 import sys
+import os
+import subprocess
 
 import qrcode
 import requests
@@ -9,15 +11,45 @@ try:
     from pyzbar.pyzbar import decode
 except Exception as e:
     print("无法找到 zbar 共享库。请确保安装了 zbar。")
+    import_success = False
+
     if platform.system() == "Linux":
         print("对于基于 RPM 的系统（如 Fedora), 您可以运行以下命令:")
         print("sudo dnf install -y zbar")
     elif platform.system() == "Darwin":
         print("MacOS 安装 zbar 请参考:")
         print("https://github.com/LibraHp/GetQzonehistory/issues/23#issuecomment-2349269027")
+        
+        try:
+            subprocess.check_call(["brew", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("检测到您已安装 Homebrew。是否通过 Homebrew 安装 zbar？ (y/n)")
+            user_input = input().strip().lower()
+            
+            if user_input == "y":
+                # 安装 zbar
+                subprocess.check_call(["brew", "install", "zbar"])
+
+                # 创建 lib 目录和符号链接
+                if not os.path.exists("lib"):
+                    os.makedirs("lib")
+
+                zbar_lib_path = os.path.join(subprocess.check_output(["brew", "--prefix", "zbar"], text=True).strip(), "lib", "libzbar.dylib")
+                subprocess.check_call(["ln", "-s", zbar_lib_path, "./lib/libzbar.dylib"])
+                print("zbar 安装并配置成功。")
+                
+                # 尝试导入 pyzbar
+                from pyzbar.pyzbar import decode
+                import_success = True
+        except FileNotFoundError:
+            print("未检测到 Homebrew。请先安装 Homebrew 或参考文档手动安装 zbar。")
+        except subprocess.CalledProcessError:
+            print("检测 Homebrew 版本时出错，请确保 Homebrew 正常安装。")
+        except Exception as install_error:
+            print(f"安装过程中发生错误: {install_error}")
+    
+    if not import_success:
+        print("有关更多安装指南，请参考 zbar 的官方文档或您的发行版文档。")
         sys.exit(1)
-    print("有关更多安装指南，请参考 zbar 的官方文档或您的发行版文档。")
-    sys.exit(1)
 
 import time
 import re
