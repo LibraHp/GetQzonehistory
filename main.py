@@ -24,7 +24,7 @@ ua = UserAgent()
 version = "1.0.2"
 
 is_debug = False
-
+is_stop = False
 # 初始化所有消息列表
 all_messages = []
 # 初始化说说列表
@@ -1051,7 +1051,11 @@ def main(page: ft.Page):
         )
 
     def get_message(start, count):
-        while True:
+        for i in range(5):
+            if i == 4:
+                log("请求频繁，换个时间再试吧", "ERROR")
+                is_stop = True
+            time.sleep(2)
             mc = get_message_unsafe(start, count)
             if isinstance(mc, requests.Response) and mc.status_code == 200 and mc.encoding.lower() == 'utf-8':
                 return mc
@@ -1100,7 +1104,10 @@ def main(page: ft.Page):
             upper_bound = 10000000  # 假设最大总量为1000000
             total = upper_bound // 2  # 初始的总量为上下界的中间值
             while lower_bound <= upper_bound:
+                if is_stop:
+                    return 0
                 response = get_message(total, 10)
+                time.sleep(1)
                 if "img" in response.text:
                     # 请求成功，总量应该在当前总量的右侧
                     lower_bound = total + 1
@@ -1141,15 +1148,16 @@ def main(page: ft.Page):
             page.update()
 
             for i in range(int(count / 100) + 1):
+                if is_stop:
+                    break
                 try:
                     # 获取消息并解码
+                    time.sleep(1)
                     message_content = get_message(i * 100, 100).text
                     message = message_content if message_content else None
-                    # if is_debug:
-                    #     log(message, "DEBUG")
-                    # 确保消息内容存在
                     if not message:
                         continue
+
 
                     # 处理消息
                     html = process_old_html(message)
@@ -1227,7 +1235,10 @@ def main(page: ft.Page):
 
             # 完成消息获取
             content_area.content.clean()
-            log("获取成功！", "SUCCESS")
+            if is_stop:
+                log("获取失败，换个时间再来吧", "WARNING")
+            else:
+                log("获取成功！", "SUCCESS")
             clean_content()
             unlock_tabs()
             content_area.content.controls.append(get_message_result())
