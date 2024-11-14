@@ -78,7 +78,7 @@ jobs:
 
     - name: Flet Build macOS (x86_64)
       run: |
-        flet pack --name GetQzonehistory-latest main.py -i .\assets\icon.ico
+        flet pack --name GetQzonehistory-latest main.py -i ./assets/icon.ico
 
     - name: Zip the macOS (x86_64) build
       run: |
