@@ -159,4 +159,4 @@ jobs:
         body: 'This release was created by GitHub Actions automatically. There is the latest version of GetQzonehistory.'
         files: './*.zip'
       env:
-        GITHUB_TOKEN: ${{ secrets.DEPLOY_KEY }
+        GITHUB_TOKEN: ${{ secrets.DEPLOY_KEY }}
