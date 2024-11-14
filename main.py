@@ -1048,6 +1048,7 @@ def main(page: ft.Page):
         )
 
     def get_message(start, count):
+        global is_stop
         for i in range(5):
             if i == 4:
                 log("请求频繁，换个时间再试吧", "ERROR")
@@ -1233,7 +1234,7 @@ def main(page: ft.Page):
             # 完成消息获取
             content_area.content.clean()
             if is_stop:
-                log("获取失败，换个时间再来吧", "WARNING")
+                log("获取失败，换个时间再来吧", "ERROR")
             else:
                 log("获取成功！", "SUCCESS")
             clean_content()
