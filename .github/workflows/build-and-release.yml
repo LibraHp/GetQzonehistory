@@ -150,7 +150,7 @@ jobs:
       run: |
         gh release delete ${{ env.LATEST_RELEASE_TAG }} --cleanup-tag -y || true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.DEPLOY_KEY }}
 
     - name: Create Release and Upload Assets
       uses: softprops/action-gh-release@v2
@@ -159,4 +159,4 @@ jobs:
         body: 'This release was created by GitHub Actions automatically. There is the latest version of GetQzonehistory.'
         files: './*.zip'
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.DEPLOY_KEY }
