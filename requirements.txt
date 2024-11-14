@@ -1,10 +1,10 @@
 beautifulsoup4==4.12.3
-pandas==2.2.0
-tqdm==4.66.2
-requests==2.31.0
-Pillow==10.2.0
-pyarrow==14.0.1
-openpyxl==3.1.2
+pandas==2.2.3
+tqdm==4.67.0
+requests==2.32.3
+Pillow==11.0.0
+pyarrow==18.0.0
+openpyxl==3.1.5
 pyzbar~=0.1.9
-qrcode~=7.4.2
+qrcode~=8.0
 fake-useragent
