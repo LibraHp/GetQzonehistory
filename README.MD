@@ -64,7 +64,7 @@ cd GetQzonehistory
 python -m venv myenv
 # 激活虚拟环境。在终端或命令提示符中运行以下命令：
 # 对于 Windows：
-myenv\Scripts\activate
+.\myenv\Scripts\activate
 # 对于 macOS/Linux：
 source myenv/bin/activate
 # 安装依赖
