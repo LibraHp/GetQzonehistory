@@ -15,7 +15,10 @@ import requests
 import time
 import platform
 import chardet
+import sys
+import io
 
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 texts = list()
 all_friends = list()
 other_message = list()
@@ -237,15 +240,23 @@ if __name__ == '__main__':
         # 注册信号处理函数
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
-        for i in trange(int(count / 100) + 1, desc='Progress', unit='100条'):
-            content_bytes = Request.get_message(i * 100, 100).content
+
+        for i in trange(int(count / 10) + 1, desc='Progress', unit='10条'):
+            # 每次获取10条数据
+            response = Request.get_message(i * 10, 10)
+            if response is None or not hasattr(response, 'content'):
+                print(f"获取消息失败：第 {i} 批次，返回值为空或无效")
+                continue
+            content_bytes = response.content
             detected_encoding = chardet.detect(content_bytes)['encoding']
             message = content_bytes.decode(detected_encoding if detected_encoding else "utf-8")
-            time.sleep(0.2)
+
+            # 处理HTML数据
             html = Tools.process_old_html(message)
             if "li" not in html:
                 continue
             soup = BeautifulSoup(html, 'html.parser')
+
             for element in soup.find_all('li', class_='f-single f-s-s'):
                 put_time = None
                 text = None
@@ -258,6 +269,7 @@ if __name__ == '__main__':
                     friend_link = friend_element.get('href')
                     if friend_qq not in [sublist[1] for sublist in all_friends]:
                         all_friends.append([friend_name, friend_qq, friend_link])
+
                 time_element = element.find('div', class_='info-detail')
                 text_element = element.find('p', class_='txt-box-title ellipsis-one')
                 img_element = element.find('a', class_='img-item')
@@ -268,9 +280,17 @@ if __name__ == '__main__':
                         img = img_element.find('img').get('src')
                     if text not in [sublist[1] for sublist in texts]:
                         texts.append([put_time, text, img])
+
+            # 每读取10条后休息3秒
+            time.sleep(3)
+            print("Pause for 3 seconds...")
+
     except Exception as e:
         print(f"获取QQ空间互动消息发生异常: {str(e)}")
-    texts = [t + [""] for t in texts]  # 确保texts是四列, 防止后续保存结果出现问题
+
+    # 确保texts是四列，防止后续保存结果出现问题
+    texts = [t + [""] for t in texts]
+
     try:
         user_moments = GetAllMoments.get_visible_moments_list()
         if user_moments and len(user_moments) > 0:
