@@ -1,4 +1,5 @@
 import re
+import time
 from tqdm import tqdm
 import util.LoginUtil as Login
 import requests
@@ -62,6 +63,7 @@ def get_message(start, count):
             headers=headers,
             timeout=(5, 10)  # 设置连接超时为5秒，读取超时为10秒
         )
+        time.sleep(5)
     except requests.Timeout:
         print("请求超时")
         return None
