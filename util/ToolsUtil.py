@@ -243,8 +243,8 @@ def get_content_from_split(content):
     return content_split[1].strip() if len(content_split) > 1 else content.strip()
 
 
-# 判断两个字符串是否存在互相包含的情况
+# 判断两个字符串是否相等
 def is_any_mutual_exist(str1, str2):
     str1 = get_content_from_split(str1)
     str2 = get_content_from_split(str2)
-    return str1 in str2 or str2 in str1
+    return str1 == str2
