@@ -247,9 +247,8 @@ if __name__ == '__main__':
             if response is None or not hasattr(response, 'content'):
                 print(f"获取消息失败：第 {i} 批次，返回值为空或无效")
                 continue
-            content_bytes = response.content
-            detected_encoding = chardet.detect(content_bytes)['encoding']
-            message = content_bytes.decode(detected_encoding if detected_encoding else "utf-8")
+
+            message = response.text
 
             # 处理HTML数据
             html = Tools.process_old_html(message)
