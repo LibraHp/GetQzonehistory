@@ -17,6 +17,7 @@ import traceback
 import dateparser
 import hashlib
 import copy
+import random
 # 程序版本
 version = "1.0.2"
 
@@ -1105,7 +1106,7 @@ def main(page: ft.Page):
                 if is_stop:
                     return 0
                 response = get_message(total, 10)
-                time.sleep(1)
+                time.sleep(random.uniform(5, 10))
                 if "img" in response.text:
                     # 请求成功，总量应该在当前总量的右侧
                     lower_bound = total + 1
@@ -1150,7 +1151,7 @@ def main(page: ft.Page):
                     break
                 try:
                     # 获取消息并解码
-                    time.sleep(1)
+                    time.sleep(random.uniform(5, 10))
                     message_content = get_message(i * 100, 100).text
                     message = message_content if message_content else None
                     if not message:
